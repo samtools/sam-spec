@@ -255,6 +255,17 @@ It is possible to record relationships between genomes using the following synta
 ##pedigreeDB=URL
 \end{verbatim}
 
+
+\subsubsection{Reference block checkpoint}
+Given the ability to interpret missing genotypes as either truly missing or as part of a reference block (see RBS in Genotype tags below), it can be useful to limit the genomic distance required to scan in order to find the "top" of the reference block. 
+To enable this, one may specify a Reference Block Checkpoint scheme:
+\begin{verbatim}
+##REFERENCE_BLOCK=<CHECKPOINT=1000>
+\end{verbatim}
+To indicate that a reference block will not span a POS that is divisible by 1000 so that a user can check less than 1000 genomics positions to find out whether the `.` in the genotype field means "missing" or is part of a reference block. 
+Values other than 1000 can be used.
+Non-positive values or a missing meta line indicate that there is no checkpointing.
+
 \noindent See \ref{PedigreeInDetail} for details.
 
 
@@ -421,8 +432,8 @@ See also Section~\ref{sv-format-keys} for a list of genotype keys reserved for s
       PL		& G		& Integer	& Phred-scaled genotype likelihoods rounded to the closest integer \\
       PQ		& 1		& Integer	& Phasing quality \\
       PS		& 1		& Integer	& Phase set \\
+      RBS		& 1		& Integer	& Reference Block Size\\ 
 \end{longtable}
-
 \begin{itemize}
 \renewcommand{\labelitemii}{$\circ$}
   \item AD, ADF, ADR (Integer): Per-sample read depths for each allele; total (AD), on the forward (ADF) and the reverse (ADR) strand.
@@ -514,6 +525,13 @@ See also Section~\ref{sv-format-keys} for a list of genotype keys reserved for s
   All phased genotypes that do not contain a PS subfield are assumed to belong to the same phased set.
   If the genotype in the GT field is unphased, the corresponding PS field is ignored.
   The recommended convention is to use the position of the first variant in the set as the PS identifier (although this is not required).
+  \item RBS(Integer): An integer describing the size of this genotype's reference block.
+  The size is the difference between the last position (inclusive) of the reference block and POS.
+  Downstream positions that are covered by the reference block should be missing (`.'), and will be interpreted as having the same non-reference likelihood as given in this genotype.
+  Missing genotypes (`.') that are not covered by a reference block are to be interpreted as truly missing. 
+  To disambiguate a '.'  between being truly missing and part of a reference block, one would therefore need to "look up" and find the previous RBS FORMAT value in that sample. 
+  When reading the file from top to bottom, an implementation can simply remember what the RBS is for each sample, however when using the index to "seek" to a particular point of the reference, one may need to seek to an unknown location in the file. 
+  To assist in seeking, the \verb!##REFERENCE_BLOCK! header line may define the \verb!CHECKPOINT! multiple at which a reference block will be included for all samples. In the presence of a checkpoint value, an implementation can read back from the last checkpoint and on and be assured that it will find a reference block that overlaps the current position, if it exists. 
 \end{itemize}
 
 
