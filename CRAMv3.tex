@@ -755,7 +755,7 @@ for the next fragment\tabularnewline
 TS & encoding\texttt{<}int\texttt{>} & template size & template sizes\tabularnewline
 \hline
 NF & encoding\texttt{<}int\texttt{>} & distance to next fragment & number of records
-to the next fragment\tnote{b}\tabularnewline
+to skip to the next fragment\tnote{b}\tabularnewline
 \hline
 TL\tnote{c} & encoding\texttt{<}int\texttt{>} & tag ids  & list of tag ids, see tag encoding
 section\tabularnewline
@@ -1333,7 +1333,7 @@ byte[] & RN & read names & read names\tabularnewline
 \EndProcedure
 \end{algorithmic}
 
-\subsection{\textbf{Mate record}}
+\subsection{\textbf{Mate records}}
 \label{subsec:mate}
 
 There are two ways in which mate information can be preserved in CRAM.
@@ -1344,8 +1344,8 @@ If this and the next fragment are within the same slice, we can derive much of t
 The upstream record has CF bit 4 (mate downstream) flag set and stores the number of records to skip (in the NF data series) between this record and the record for the next fragment on this template, with zero meaning the next fragment is also the next record.
 The downstream record has neither CF bits 2 (detached) or 4 (mate downstream) set nor does it use the NF data series (unless it also has an additional ``next fragment'' to refer to).
 
-It is not mandatory to use this deduplication approach and optionally tools may wish to label data as detached even when all records for the template reside in the same slice.
-One example reason for this may be to encode inconsistent data in order to preserve round-trips in to and out of the CRAM format.
+It is not mandatory to use this deduplication approach and optionally CRAM write implementations may wish to label data as detached even when all records for the template reside in the same slice.
+One reason to do this may be to preserve inconsistent data so that it round-trips through the CRAM format with full fidelity
 
 \begin{tabular}{|>{\raggedright}p{68pt}|>{\raggedright}p{115pt}|>{\raggedright}p{228pt}|}
 \hline
