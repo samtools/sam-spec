@@ -7,6 +7,11 @@
 \usepackage[margin=0.75in]{geometry}
 \usepackage[pdfborder={0 0 0}]{hyperref}
 
+\usepackage{draftwatermark}
+\SetWatermarkAngle{315}
+\SetWatermarkText{PRELIMINARY}
+\SetWatermarkScale{4}
+
 \usepackage{listings}
 \lstset{
    basicstyle=\ttfamily,
@@ -17,7 +22,7 @@
 \renewcommand{\thefootnote}{\fnsymbol{footnote}}
 
 \begin{document}
-\input{VCFv4.4.ver}
+\input{VCFv4.4.draft.ver}
 \title{\huge \color{red} DRAFT SPEC SUBJECT TO CHANGE \\ The Variant Call Format Specification \\ \vspace{0.5em} \large VCFv4.4 and BCFv2.2}
 \date{\headdate}
 \maketitle
@@ -77,7 +82,7 @@ UTF-8 is a multi-byte character encoding that is a strict superset of 7-bit ASCI
 As a result, most software that processes VCF files does not have to be aware of the possible presence of multi-byte UTF-8 characters.
 Note that non-printable characters U+0000--U+0008, U+000B--U+000C, U+000E--U+001F are disallowed.
 Line separators must be CR+LF or LF and they are allowed only as line separators at end of line.
-Characters with special meaning (such as field delimiters `\verb|;|' in INFO or `\verb|:|' FORMAT fields) must be represented using the capitalized percent encoding:
+Some characters have a special meaning when they appear (such as field delimiters `\verb|;|' in INFO or `\verb|:|' FORMAT fields), and for any other meaning they must be represented with the capitalized percent encoding:
 
 \begingroup\footnotesize
 \begin{tabular}{l l l}
@@ -295,17 +300,17 @@ Fixed fields are:
 \begin{enumerate}
   \item CHROM --- chromosome: An identifier from the reference genome or an angle-bracketed ID String (``$<$ID$>$'') pointing to a contig in the assembly file (cf.\ the \#\#assembly line in the header).
   All entries for a specific CHROM must form a contiguous block within the VCF file.
-  (String, no white-space permitted, Required).
+  (String, no whitespace permitted, Required).
   \item POS --- position: The reference position, with the 1st base having position 1.
   Positions are sorted numerically, in increasing order, within each reference sequence CHROM.
   It is permitted to have multiple records with the same POS.
   Telomeres are indicated by using positions 0 or N+1, where N is the length of the corresponding chromosome or contig.
   (Integer, Required)
-  \item ID --- identifier: Semi-colon separated list of unique identifiers where available.
+  \item ID --- identifier: Semicolon-separated list of unique identifiers where available.
   If this is a dbSNP variant the rs number(s) should be used.
   No identifier should be present in more than one data record.
   If there is no identifier available, then the MISSING value should be used.
-  (String, no white-space or semi-colons permitted, duplicate values not allowed.)
+  (String, no whitespace or semicolons permitted, duplicate values not allowed.)
   \item REF --- reference base(s): Each base must be one of A,C,G,T,N (case insensitive).
   Multiple bases are permitted.
   The value in the POS field refers to the position of the first base in the String.
@@ -315,11 +320,11 @@ Fixed fields are:
 
   If the reference sequence contains IUPAC ambiguity codes not allowed by this specification (such as R = A/G), the ambiguous reference base must be reduced to a concrete base by using the one that is first alphabetically (thus R as a reference base is converted to A in VCF.)
 
-  \item ALT --- alternate base(s): Comma separated list of alternate non-reference alleles.
+  \item ALT --- alternate base(s): Comma-separated list of alternate non-reference alleles.
   These alleles do not have to be called in any of the samples.
-  Options are base Strings made up of the bases A,C,G,T,N,*, (case insensitive) or a MISSING value `.' (no variant) or an angle-bracketed ID String (``$<$ID$>$'') or a breakend replacement string as described in the section on breakends.
-  The `*' allele is reserved to indicate that the allele is missing due to an overlapping deletion.
+  Options are base Strings made up of the bases A,C,G,T,N (case insensitive) or the `*' symbol (allele missing due to overlapping deletion) or a MISSING value `.' (no variant) or an angle-bracketed ID String (``$<$ID$>$'') or a breakend replacement string as described in Section \ref{Breakends}.
   If there are no alternative alleles, then the MISSING value must be used.
+  In other words, the ALT field must be a symbolic allele, or a breakend replacement string, or match the regular expression \texttt{\^{}([ACGTNacgtn]+|\string\*|\string\.)\$}.
   Tools processing VCF files are not required to preserve case in the allele String, except for IDs, which are case sensitive.
   (String; no whitespace, commas, or angle-brackets are permitted in the ID String itself)
   \item QUAL --- quality: Phred-scaled quality score for the assertion made in ALT. i.e.\ $-10log_{10}$ prob(call in ALT is wrong).
@@ -329,16 +334,18 @@ Fixed fields are:
   Otherwise, if the site has not passed all filters, a semicolon-separated list of codes for filters that fail. e.g.\ ``q10;s50'' might indicate that at this site the quality is below 10 and the number of samples with data is below 50\% of the total number of samples.
   `0' is reserved and must not be used as a filter String.
   If filters have not been applied, then this field must be set to the MISSING value.
-  (String, no white-space or semi-colons permitted, duplicate values not allowed.)
-  \item INFO --- additional information: (String, no semi-colons or equals-signs permitted; commas are permitted only as delimiters for lists of values; characters with special meaning can be encoded using the percent encoding, see Section~\ref{character-encoding}; space characters are allowed)
+  (String, no whitespace or semicolons permitted, duplicate values not allowed.)
+  \item INFO --- additional information: Semicolon-separated series of additional information fields, or the MISSING value `{\tt .}'\ if none are present.
+  Each subfield consists of a short \emph{key} with optional \emph{values} in the format: key[=value[,\,\ldots,value]].
+  Literal semicolon (`{\tt ;}') and equals sign (`{\tt =}') characters are not permitted in these values, and literal commas (`{\tt ,}') are permitted only as delimiters for lists of values; characters with special meaning can be encoded using percent encoding, see Section~\ref{character-encoding}.
+  Space characters are allowed in values.
 
-  INFO fields are encoded as a semicolon-separated series of short keys with optional values in the format: key[=data[,data]].
   INFO keys must match the regular expression \texttt{\^{}([A-Za-z\_][0-9A-Za-z\_.]*|1000G)\$}, please note that ``1000G'' is allowed as a special legacy value.
   Duplicate keys are not allowed.
   Arbitrary keys are permitted, although those listed in Table~\ref{table:reserved-info} and described below are reserved (albeit optional).
 
   The exact format of each INFO key should be specified in the meta-information (as described above).
-  Example for an INFO field: DP=154;MQ=52;H2.
+  Example of a complete INFO field: {\tt DP=154;MQ=52;H2}.
   Keys without corresponding values may be used to indicate group membership (e.g.\ H2 indicates the SNP is found in HapMap 2).
   See Section~\ref{sv-info-keys} for additional reserved INFO keys used to encode structural variants.
 \end{enumerate}
@@ -397,6 +404,7 @@ Additional Genotype keys can be defined in the meta-information, however, softwa
 
 If any of the fields is missing, it is replaced with the MISSING value.
 For example if the FORMAT is GT:GQ:DP:HQ then $0\mid0:.:23:23,34$ indicates that GQ is missing.
+If a field contains a list of missing values, it can be represented either as a single MISSING value (`.') or as a list of missing values (e.g.\ `.,.,.' if the field was Number=3).
 Trailing fields can be dropped, with the exception of the GT field, which should always be present if specified in the FORMAT field.
 
 
@@ -437,9 +445,9 @@ See also Section~\ref{sv-format-keys} for a list of genotype keys reserved for s
   \item EC (Integer): Comma separated list of expected alternate allele counts for each alternate allele in the same order as listed in the ALT field.
   Typically used in association analyses.
   \item FT (String): Sample genotype filter indicating if this genotype was ``called'' (similar in concept to the FILTER field).
-  Again, use PASS to indicate that all filters have been passed, a semi-colon separated list of codes for filters that fail, or `.' to indicate that filters have not been applied.
+  Again, use PASS to indicate that all filters have been passed, a semicolon-separated list of codes for filters that fail, or `.' to indicate that filters have not been applied.
   These values should be described in the meta-information in the same way as FILTERs.
-  No white-space or semi-colons permitted.
+  No whitespace or semicolons permitted.
   \item GQ (Integer): Conditional genotype quality, encoded as a phred quality $-10log_{10}$ p(genotype call is wrong, conditioned on the site's being variant).
   \item GP (Float): Genotype posterior probabilities in the range 0 to 1 using the same ordering as the GL field; one use can be to store imputed genotype probabilities.
   \item GT (String): Genotype, encoded as allele values separated by either of $/$ or $\mid$.
@@ -907,6 +915,7 @@ VCF STRUCTURAL VARIANT EXAMPLE
 \normalsize
 
 \subsection{Specifying complex rearrangements with breakends}
+\label{Breakends}
 
 An arbitrary rearrangement event can be summarized as a set of novel \textbf{adjacencies}. Each adjacency ties together $2$ \textbf{breakends}.
 The two breakends at either end of a novel adjacency are called \textbf{mates}.
