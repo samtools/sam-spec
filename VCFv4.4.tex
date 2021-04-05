@@ -17,8 +17,8 @@
 \renewcommand{\thefootnote}{\fnsymbol{footnote}}
 
 \begin{document}
-\input{VCFv4.3.ver}
-\title{The Variant Call Format Specification \\ \vspace{0.5em} \large VCFv4.3 and BCFv2.2}
+\input{VCFv4.4.ver}
+\title{\huge \color{red} DRAFT SPEC SUBJECT TO CHANGE \\ The Variant Call Format Specification \\ \vspace{0.5em} \large VCFv4.4 and BCFv2.2}
 \date{\headdate}
 \maketitle
 \begin{quote}\small
@@ -40,7 +40,7 @@ In order to ensure interoperability across platforms, VCF compliant implementati
 \subsection{An example}
 \scriptsize
 \begin{verbatim}
-##fileformat=VCFv4.3
+##fileformat=VCFv4.4
 ##fileDate=20090805
 ##source=myImputationProgramV3.1
 ##reference=file:///seq/references/1000GenomesPilot-NCBI36.fasta
@@ -122,10 +122,10 @@ Meta-information lines can be in any order with the exception of `fileformat` wh
 
 \subsubsection{File format}
 A single `fileformat' line is always required, must be the first line in the file, and details the VCF format version number.
-For VCF version 4.3, this line is:
+For VCF version , this line is:
 
 \begin{verbatim}
-##fileformat=VCFv4.3
+##fileformat=VCFv
 \end{verbatim}
 
 
@@ -632,10 +632,10 @@ The following $EVENTTYPE$ values are reserved and should be used when appropriat
   \item INV - Inversion
   \item TRA - Translocation
   \item TRA:BALANCED - Balanced inter-chromosomal translocation
-  \item TRA:UNBALANCED - Balanced inter-chromosomal translocation
+  \item TRA:UNBALANCED - Unbalanced inter-chromosomal translocation
   \item CHROMOTHRIPSIS
   \item CHROMOPLEXY
-  \item BFB: breakage fusion bridge
+  \item BFB - breakage fusion bridge
   \item DOUBLEMINUTE - Double minute
 \end{itemize}
 
@@ -868,7 +868,7 @@ The following page contains examples of structural variants encoded in VCF, show
 \begin{verbatim}
 VCF STRUCTURAL VARIANT EXAMPLE
 
-##fileformat=VCFv4.3
+##fileformat=VCFv
 ##fileDate=20100501
 ##reference=1000GenomesPilot-NCBI36
 ##assembly=ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/sv/breakpoint_assemblies.fasta
@@ -2080,6 +2080,11 @@ BCF2 files are expected to be indexed through the same index scheme, section~4 a
 
 \section{List of changes}
 
+\subsection{Changes between VCFv4.4 and VCFv4.3}
+\begin{itemize}
+\item Started new Draft Spec
+\end{itemize}
+
 \subsection{Changes to VCFv4.3}
 
 \begin{itemize}
@@ -2093,7 +2098,6 @@ The characters `{\tt\verb|\|\,,\,"`'\,()\,\verb|{}|}' are now invalid in VCF con
 
 The VCF specification previously disallowed colons (`{\tt :}') in contig names to avoid confusion when parsing breakends, but this was unnecessary.
 Even with contig names containing colons, the breakend mate position notation can be unambiguously parsed because the ``{\tt :}\emph{pos}'' part is \textbf{always} present.
-
 \item Added PP tag which is the phred-scaled analogue to GP
 \end{itemize}
 

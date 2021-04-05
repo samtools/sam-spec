@@ -8,8 +8,35 @@
 \usepackage{makecell}
 \usepackage[pdfborder={0 0 0},hyperfootnotes=false]{hyperref}
 \usepackage[title]{appendix}
+\usepackage[calc]{picture}
+\usepackage{tikz}
 
-\makeindex
+\newlength{\bytewidth}
+\newlength{\bytetotalheight}
+\newlength{\bytedepth}
+\newcommand*\byteboxsetup[1][2.1em]{\setlength{\bytewidth}{#1}
+  \settototalheight{\bytetotalheight}{MQgjpqy}
+  \settodepth{\bytedepth}{Qgjpqy}
+  \addtolength{\bytetotalheight}{8pt}\addtolength{\bytedepth}{4pt}}
+
+\newcommand*{\byteboxAux}[3]{\raisebox{-\bytedepth}
+ {\begin{picture}(#1\bytewidth,\bytetotalheight)
+    \multiput(0,0)(0,\bytetotalheight){2}{\line(1,0){#1\bytewidth}}
+    #3
+    \put(#1\bytewidth,0){\line(0,1){\bytetotalheight}}
+    \put(0,\bytedepth){\makebox[#1\bytewidth][c]{#2}}
+    \newcount\nticks \nticks #1\relax \advance\nticks -1\relax
+    \multiput(\bytewidth,0)(\bytewidth,0){\nticks}{\line(0,1){3pt}}
+  \end{picture}\strut}}
+
+% Use as, e.g., \firstbytebox{2}{Tag}\bytebox{1}{\tt s}\bytebox{2}{int16\_t}
+\newcommand*{\firstbytebox}[2]{\byteboxAux{#1}{#2}{\put(0,0){\line(0,1){\bytetotalheight}}}}
+\newcommand*{\bytebox}[2]{\byteboxAux{#1}{#2}{}}
+
+\newcommand*{\cclass}[1]{{\rm\sf :#1:}}
+\newcommand*{\caret}{\textsuperscript{$\wedge$}}
+
+\newcommand*{\memlimited}{\textcolor{gray}{\footnotesize\it limited}}
 
 \begin{document}
 
@@ -36,12 +63,15 @@ not. Each alignment line has 11 mandatory fields for essential alignment
 information such as mapping position, and variable number of optional
 fields for flexible or aligner specific information.
 
-This specification is for version 1.5 of the SAM and BAM formats.  Each SAM and
+This specification is for version 1.6 of the SAM and BAM formats.  Each SAM and
 BAM file may optionally specify the version being used via the
 {\tt @HD VN} tag. For full version history see Appendix~\ref{sec:history}. 
 
+Unless explicitly specified elsewhere, all fields are encoded using 7-bit US-ASCII \footnote{Charset ANSI\_X3.4-1968 as defined in RFC1345.} in using the POSIX / C locale.
+Regular expressions listed use the POSIX / IEEE Std 1003.1 extended syntax.
+
 \subsection{An example}\label{sec:example}
-Suppose we have the following alignment with bases in lower cases
+Suppose we have the following alignment with bases in lowercase
 clipped from the alignment. Read {\tt r001/1} and {\tt r001/2}
 constitute a read pair; {\tt r003} is a chimeric read; {\tt r004}
 represents a split alignment.
@@ -69,7 +99,7 @@ properly aligned\slash multiple segments;
 properly aligned\slash multiple segments.}
 \begin{framed}\small
 \begin{verbatim}
-@HD VN:1.5 SO:coordinate
+@HD VN:1.6 SO:coordinate
 @SQ SN:ref LN:45
 r001   99 ref  7 30 8M2I4M1D3M = 37  39 TTAGATAAAGGATACTG *
 r002    0 ref  9 30 3S6M1P1I4M *  0   0 AAAAGATAAGGATA    *
@@ -95,12 +125,12 @@ r001  147 ref 37 30 9M         =  7 -39 CAGCGGCAT         * NM:i:1
 \item[Linear alignment]
   An alignment of a read to a single reference sequence that may include
   insertions, deletions, skips and clipping, but may not include direction
-  changes (i.e. one portion of the alignment on forward strand and another
+  changes (i.e., one portion of the alignment on forward strand and another
   portion of alignment on reverse strand). A linear alignment can be
   represented in a single SAM record.
 %  A alignment of a read to a single locus on the reference, where the
 %  alignment may have short insertions/deletions but does not have long gaps
-%  (e.g. due to introns or structural variation).
+%  (e.g., due to introns or structural variation).
 
 \item[Chimeric alignment]
   An alignment of a read that cannot be represented as a linear alignment. A
@@ -117,7 +147,7 @@ r001  147 ref 37 30 9M         =  7 -39 CAGCGGCAT         * NM:i:1
   representation of the alignment of the read.
 
 \item[Multiple mapping]
-  The correct placement of a read may be ambiguous, e.g. due to repeats.  In
+  The correct placement of a read may be ambiguous, e.g., due to repeats.  In
   this case, there may be multiple read alignments for the same read.  One of
   these alignments is considered primary.  All the other alignments have the
   secondary alignment flag set in the SAM records that represent them.  All the
@@ -142,15 +172,41 @@ r001  147 ref 37 30 9M         =  7 -39 CAGCGGCAT         * NM:i:1
 
 \end{description}
 
-\footnotetext{A chimeric alignment is primarily caused by structural
-variations, gene fusions, misassemblies, RNA-seq or experimental protocols. It is more frequent given longer
-reads. For a chimeric alignment, the linear alignments consisting of the aligment are largely
+\footnotetext{Chimeric alignments are primarily caused by structural
+variations, gene fusions, misassemblies, RNA-seq or experimental protocols.
+They are more frequent given longer reads.
+For a chimeric alignment, the linear alignments constituting the alignment are largely
 non-overlapping; each linear alignment may have high mapping quality and is
 informative in SNP/INDEL calling. In contrast, multiple mappings are caused primarily by repeats.  They are less frequent
 given longer reads. If a read has multiple mappings, all these mappings are
 almost entirely overlapping with each other; except the single-best optimal
 mapping, all the other mappings get mapping quality $<$Q3
 and are ignored by most SNP/INDEL callers.}
+
+\subsubsection{Character set restrictions}\label{sec:charset}
+
+Reference sequence names, CIGAR strings, and several other field types are used as values or parts of values of other fields in SAM and related formats such as VCF.
+To ensure that these other fields' representations are unambiguous, these field types disallow particular delimiter characters.
+
+Query or read names may contain any printable ASCII characters in the range \verb"[!-~]" apart from `\verb"@"', so that SAM alignment lines can be easily distinguished from header lines.
+(They are also limited in length.)
+
+Reference sequence names may contain any printable ASCII characters in the range {\tt [!-\verb:~:]} apart from backslashes, commas, quotation marks, and brackets---i.e., apart from `{\tt \verb:\:\,,\,"`'\,()\,[]\,\verb:{}:\,<>}'---and may not start with `{\tt *}' or `{\tt =}'.%
+\footnote{Characters that are \emph{not} disallowed include `{\tt |}', which historically appeared in reference names derived from NCBI FASTA files, and `{\tt :}', which appears in HLA allele names.
+Appendix~\ref{sec:parse-region} describes approaches for parsing \emph{name}{\tt [:}\emph{begin}{\tt -}\emph{end}{\tt ]} region notation unambiguously even though \emph{name} may itself contain colons.}
+
+Thus they match the following regular expression:
+\begin{center}
+{\tt [\verb"0-9A-Za-z!#$%&+./:;?@^_|~-"][\verb"0-9A-Za-z!#$%&*+./:;=?@^_|~-"]*}
+\end{center}
+
+% Pedantically this should be [[:rname:]^*=][[:rname:]]*, but we take advantage
+% of POSIX (Issue 7) section 9.3.5/8 to elide the excess brackets for clarity.
+\newcommand*{\rnameRegexp}{[\cclass{rname}\caret*=][\cclass{rname}]*}
+
+\noindent
+For clarity, elsewhere in this specification we write this set of allowed characters as a character class~{\tt [\cclass{rname}]} and extend the POSIX regular expression notation to use {\tt\caret *=} to indicate the omission of `{\tt *}' and `{\tt =}' from the character class.
+Thus this regular expression can be written more clearly as {\tt\rnameRegexp}.
 
 \subsection{The header section}
 Each header line begins with the character `{\tt @}' followed by
@@ -159,7 +215,7 @@ In the header, each line is TAB-delimited and, apart from {\tt @CO} lines,
 each data field follows a format `{\tt TAG:VALUE}' where {\tt TAG}
 is a two-character string that defines the format and content of {\tt VALUE}.
 Thus header lines match {\tt
-  /\char94@[A-Z][A-Z](\char92t[A-Za-z][A-Za-z0-9]:[
+  /\char94@(HD|SQ|RG|PG)(\char92t[A-Za-z][A-Za-z0-9]:[
   -\char126]+)+\$/} or {\tt /\char94@CO\char92t.*/}.
 
 The following table describes the header record types that may be used
@@ -185,26 +241,40 @@ meanings can be avoided.}
   \cline{1-3}
   \multicolumn{2}{|l|}{\bf Tag} & {\bf Description} \\
   \cline{1-3}
-  \multicolumn{2}{|l}{\tt @HD} & The header line. The first line if present. \\\cline{2-3}
+  \endfirsthead
+  \cline{1-3}
+  \endhead
+  \multicolumn{2}{|l}{\tt @HD} & File-level metadata. Optional. If present, there must be only one {\tt @HD} line and it must be the first line of the file. \\\cline{2-3}
   & {\tt VN}* & Format version. \emph{Accepted format}: {\tt /\char94[0-9]+\char92.[0-9]+\$/}.\\\cline{2-3}
   & {\tt SO} & Sorting order of alignments. \emph{Valid values}: {\tt unknown} (default), {\tt
     unsorted}, {\tt queryname} and {\tt coordinate}. For coordinate sort, the major sort
   key is the {\sf RNAME} field, with order defined by the order of {\tt @SQ} lines in the header.  The
   minor sort key is the {\sf POS} field.  For alignments with equal {\sf RNAME} and {\sf POS}, order is
   arbitrary.  All alignments with `{\tt *}' in {\sf RNAME} field follow alignments with some other
-  value but otherwise are in arbitrary order.\\\cline{2-3}
+  value but otherwise are in arbitrary order.
+  For queryname sort, no explicit requirement is made regarding the ordering other than that it be applied consistently throughout the entire file.%
+  \footnote{It is known that widely used software libraries have differing definitions of the queryname sort order, meaning care should be taken when operating on multiple files of varying provenance.
+  Tools may wish to use the sub-sort field to explicitly distinguish between natural and lexicographical ordering.  See Section~\ref{sec:sub-sort}.}\\\cline{2-3}
   & {\tt GO} & Grouping of alignments, indicating that similar alignment records
     are grouped together but the file is not necessarily sorted overall.
     \emph{Valid values}: {\tt none} (default), {\tt query} (alignments are
     grouped by {\sf QNAME}), and {\tt reference} (alignments are grouped by
     {\sf RNAME}/{\sf POS}).\\\cline{1-3}
+  & {\tt SS} & Sub-sorting order of alignments. Valid values are of the form \emph{sort-order}{\tt :}\emph{sub-sort}, where \emph{sort-order} is the same value stored in the {\tt SO} tag and \emph{sub-sort} is an implementation-dependent colon-separated string further describing the sort order, but with some predefined terms defined in Section~\ref{sec:sub-sort}.
+    For example, if an algorithm relies on a {\tt coordinate} sort that, at each coordinate, is further sorted by query name then the header could contain {\tt @HD SO:coordinate SS:coordinate:queryname}.%
+\footnote{The repetition of \emph{sort-order} enables a limited form of validation.
+For example, {\tt @HD SO:queryname SS:coordinate:TLEN} would indicate that the data has been re-sorted (by query name) by a non-{\tt SS}-aware tool and the {\tt SS} field should be ignored.}
+    If the primary sort is not one of the predefined primary sort orders, then {\tt unsorted} should be used and the subsort is effectively the major sort.
+    For example, if sorted by an auxiliary tag {\tt MI} then by coordinate then the header could contain {\tt @HD SO:unsorted SS:unsorted:MI:coordinate}.
+    \newline
+    \emph{Regular expression}: {\tt (coordinate|queryname|unsorted)(:[\verb"A-Za-z0-9_-"]+)+}\\\cline{1-3}
   \multicolumn{2}{|l}{\tt @SQ} & Reference sequence dictionary. The order of {\tt @SQ} lines defines the alignment sorting order.\\\cline{2-3}
   & {\tt SN}* & Reference sequence name.
 The {\tt SN} tags and all individual {\tt AN} names in all {\tt @SQ} lines
 must be distinct.
   The value of this field is used in the
-  alignment records in {\sf RNAME} and {\sf RNEXT} fields. Regular expression: {\tt [!-)+-\char60\char62-\char126][!-\char126]*}\\\cline{2-3}
-  & {\tt LN}* & Reference sequence length. \emph{Range}: {\tt [1,2$^{31}$-1]}\\\cline{2-3}
+  alignment records in {\sf RNAME} and {\sf RNEXT} fields. Regular expression: {\tt\rnameRegexp}\\\cline{2-3}
+  & {\tt LN}* & Reference sequence length. \emph{Range}: $[1,\,2^{31}-1]$\\\cline{2-3}
   & {\tt AH} & Indicates that this sequence is an alternate locus.%
 \footnote{See \url{https://www.ncbi.nlm.nih.gov/grc/help/definitions} for descriptions of \emph{alternate locus} and \emph{primary assembly}.}
   The value is the locus in the primary assembly for which this sequence is an alternative, in the format `\emph{chr}{\tt :}\emph{start}{\tt -}\emph{end}', `\emph{chr}' (if known), or `{\tt *}' (if unknown), where `\emph{chr}' is a sequence in the primary assembly.
@@ -212,25 +282,31 @@ must be distinct.
   & {\tt AN} & Alternative reference sequence names.
 A comma-separated list of alternative names that tools may use when referring
 to this reference sequence.%
-\footnote{For example, given `{\tt @SQ SN:MT AN:chrMT,M,chrM LN:16569}',
+\footnote{For example, given `{\tt @SQ SN:MT AN:chrMT,M,chrM LN:16569 TP:circular}',
 tools can ensure that a user's request for any of `MT', `chrMT', `M',
-or~`chrM' succeeds and refers to the same sequence.
-Note the restricted set of characters allowed in an alternative name.}
+or~`chrM' succeeds and refers to the same sequence.}
 These alternative names are not used elsewhere within the SAM file;
 in particular, they must not appear in alignment records' {\sf RNAME}
 or~{\sf RNEXT} fields.
 \emph{Regular expression}: \emph{name}{\tt (,}\emph{name}{\tt )*}
-where \emph{name} is {\tt [0-9A-Za-z][0-9A-Za-z*+.@\_|-]*}\\\cline{2-3}
+where \emph{name} is {\tt\rnameRegexp}\\\cline{2-3}
   & {\tt AS} & Genome assembly identifier. \\\cline{2-3}
+  & {\tt DS} & Description.  UTF-8 encoding may be used.\\\cline{2-3}
   & {\tt M5} & MD5 checksum of the sequence.  See Section~\ref{sec:ref-md5}\\\cline{2-3}
   & {\tt SP} & Species.\\\cline{2-3}
+  & {\tt TP} & Molecule topology. \emph{Valid values}: {\tt linear} (default) and {\tt circular}.%
+\footnote{The previous footnote's example identifies MT as a circular chromosome.
+The {\tt TP} field is often omitted, which implies linear.}\\\cline{2-3}
   & {\tt UR} & URI of the sequence.  This value may start with one of the standard
-  protocols, e.g http: or ftp:.  If it does not start with one of these protocols, it is assumed to be a file-system path.\\\cline{1-3}
+  protocols, e.g., `{\tt http:}' or `{\tt ftp:}'.  If it does not start with one of these protocols, it is assumed to be a file-system path.\\\cline{1-3}
   \multicolumn{2}{|l}{\tt @RG} & Read group. Unordered multiple {\tt @RG} lines are allowed.\\\cline{2-3}
   & {\tt ID}* & Read group identifier. Each {\tt @RG} line must have a unique {\tt ID}. The value of {\tt ID}
   is used in the RG tags of alignment records. Must be unique among all read groups in header section.  Read group IDs may be modified when merging SAM files in order to handle collisions.\\\cline{2-3}
+  & {\tt BC} & Barcode sequence identifying the sample or library.
+  This value is the expected barcode bases as read by the sequencing machine in the absence of errors.
+  If there are several barcodes for the sample/library (e.g., one on each end of the template), the recommended implementation concatenates all the barcodes separating them with hyphens (`{\tt -}').\\\cline{2-3}
   & {\tt CN} & Name of sequencing center producing the read.\\\cline{2-3}
-  & {\tt DS} & Description.\\\cline{2-3}
+  & {\tt DS} & Description.  UTF-8 encoding may be used.\\\cline{2-3}
   & {\tt DT} & Date the run was produced (ISO8601 date or date/time).\\\cline{2-3}
   & {\tt FO} & Flow order. The array of nucleotide bases that correspond to the nucleotides used for each flow of each read.
   	Multi-base flows are encoded in IUPAC format, and non-nucleotide flows by various other characters. \emph{Format}: {\tt /\char92*|[ACMGRSVTWYHKDBN]+/}\\\cline{2-3}
@@ -239,34 +315,52 @@ where \emph{name} is {\tt [0-9A-Za-z][0-9A-Za-z*+.@\_|-]*}\\\cline{2-3}
   & {\tt PG} & Programs used for processing the read group.\\\cline{2-3}
   & {\tt PI} & Predicted median insert size.\\\cline{2-3}
   & {\tt PL} & Platform/technology used to produce the reads. \emph{Valid values}:
-  {\tt CAPILLARY}, {\tt LS454}, {\tt ILLUMINA}, {\tt SOLID}, {\tt HELICOS}, {\tt IONTORRENT}, {\tt ONT}, and {\tt PACBIO}.\\\cline{2-3}
-  & {\tt PM} & Platform model. Free-form text providing further details of the
-  platform/technology used.\\\cline{2-3}
-  & {\tt PU} & Platform unit (e.g. flowcell-barcode.lane for Illumina or slide for SOLiD). Unique identifier.\\\cline{2-3}
+  {\tt CAPILLARY}, {\tt DNBSEQ} (MGI/BGI), {\tt HELICOS}, {\tt ILLUMINA}, {\tt IONTORRENT}, {\tt LS454}, {\tt ONT} (Oxford Nanopore), {\tt PACBIO} (Pacific Biotechnology), and {\tt SOLID}.
+  This field should be omitted when the technology is not in this list (though the {\tt PM} field may still be present in this case) or is unknown.\\\cline{2-3}
+  & {\tt PM} & Platform model. Free-form text providing further details of the platform/technology used.\\\cline{2-3}
+  & {\tt PU} & Platform unit (e.g., flowcell-barcode.lane for Illumina or slide for SOLiD). Unique identifier.\\\cline{2-3}
   & {\tt SM} & Sample. Use pool name where a pool is being sequenced.\\\cline{1-3}
   \multicolumn{2}{|l}{\tt @PG} & Program. \\\cline{2-3}
   & {\tt ID}* & Program record identifier. Each {\tt @PG} line must have a unique {\tt ID}.
   	The value of {\tt ID} is used in the alignment {\tt PG} tag and {\tt PP} tags of other {\tt @PG} lines.
 	{\tt PG} IDs may be modified when merging SAM files in order to handle collisions.\\\cline{2-3}
   & {\tt PN} & Program name \\\cline{2-3}
-  & {\tt CL} & Command line \\\cline{2-3}
+  & {\tt CL} & Command line.  UTF-8 encoding may be used. \\\cline{2-3}
   & {\tt PP} & Previous {\tt @PG-ID}. Must match another {\tt @PG} header's {\tt ID} tag.
   	{\tt @PG} records may be chained using {\tt PP} tag, with the last record in the chain
 	having no {\tt PP} tag. This chain defines the order of programs that have been applied to the alignment.
 	{\tt PP} values may be modified when merging SAM files in order to handle collisions of {\tt PG} {\tt ID}s.
-	The first {\tt PG} record in a chain (i.e. the one referred to by the {\tt PG} tag in a SAM record)
+	The first {\tt PG} record in a chain (i.e., the one referred to by the {\tt PG} tag in a SAM record)
 	describes the most recent program that operated on the SAM record.
 	The next {\tt PG} record in the chain describes the next most recent program that
         operated on the SAM record. The {\tt PG} {\tt ID} on a SAM record is not required
         to refer to the newest {\tt PG} record in a chain.  It may refer to any {\tt PG}
         record in a chain, implying that the SAM record has been operated on by the
         program in that {\tt PG} record, and the program(s) referred to via the {\tt PP} tag. \\\cline{2-3}
-  & {\tt DS} & Description.\\\cline{2-3}
+  & {\tt DS} & Description.  UTF-8 encoding may be used.\\\cline{2-3}
   & {\tt VN} & Program version \\\cline{1-3}
-  \multicolumn{2}{|l}{\tt @CO} & One-line text comment. Unordered multiple {\tt @CO} lines are allowed.\\
+  \multicolumn{2}{|l}{\tt @CO} & One-line text comment. Unordered multiple {\tt @CO} lines are allowed. UTF-8 encoding may be used.\\
   \cline{1-3}
 \end{longtable}
 \end{center}
+
+\subsubsection{Defined sub-sort terms}\label{sec:sub-sort}
+
+While the {\tt SS} sub-sort field allows implementation-defined keywords, some terms are predefined with specific meanings.
+
+\begin{description}
+\item[lexicographical] sort order is defined as a character-based dictionary sort with the character order as defined by the POSIX C locale.
+  For example ``abc'', ``abc17'', ``abc5'', ``abc59'' and ``abcd'' are in lexicographical order.
+
+\item[natural] sort order is similar to lexicographical order except that runs of adjacent digits are considered to be numbers embedded within the text string, ordered numerically when compared to each other and ordered as single digits when compared to the surrounding non-digit characters.
+Runs that differ only in the number of leading zeros (thus are numerically tied) are ordered by more-zeros coming before fewer-zeros.
+The characters `\texttt{-}' and `\texttt{.}' are considered as ordinary characters, so apparently negative or fractional values are not treated as part of an embedded number.
+  For example, ``abc'', ``abc+5'', ``abc-5'', ``abc.d'', ``abc03'', ``abc5'', ``abc008'', ``abc08'', ``abc8'', ``abc17'', ``abc17.+'', ``abc17.2'', ``abc17.d'', ``abc59'' and ``abcd'' are in natural order.
+
+\item[umi] is a lexicographical sort by the UMI tag.
+  The {\tt MI} tag should be used for comparing UMIs. The RX tag may be used in its absence but is not guaranteed to be unique across multiple libraries.
+
+\end{description}
 
 \subsubsection{Reference MD5 calculation}\label{sec:ref-md5}
 The {\tt M5} tag on {\tt @SQ} lines allows reference sequences to be uniquely identified through the MD5 digest of the sequence itself.
@@ -280,11 +374,11 @@ Padding characters (See Section~\ref{sec:padded-sam}) must be represented only u
 The digest is calculated as follows:
 \begin{itemize}
 \item All characters outside of the inclusive range 33 (`\char33') to 126 (`\char126') are stripped out.
-This removes all unprintable and white-space characters including spaces and new lines.
+This removes all unprintable and whitespace characters including spaces and new lines.
 Everything else is retained, even if not a legal nucleotide code.
-\item All lower-case characters are converted to upper-case.
+\item All lowercase characters are converted to uppercase.
 This operation is equivalent to calling \href{http://pubs.opengroup.org/onlinepubs/9699919799/functions/toupper.html}{\sl toupper()} on characters in the \href{http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1\_chap07.html\#tag\_07\_02}{\sl POSIX locale}.
-\item The MD5 digest is calculated as described in \href{https://tools.ietf.org/html/rfc1321}{\sl RFC 1321} and presented as a 32 character lower-case hexadecimal number.
+\item The MD5 digest is calculated as described in \href{https://tools.ietf.org/html/rfc1321}{\sl RFC 1321} and presented as a 32 character lowercase hexadecimal number.
 \end{itemize}
 
 As an example, if the reference contains the following characters (including spaces):
@@ -304,12 +398,10 @@ AGCATGTTAGATAA**GATAGCTGTGCTAGTAGGCAGTCAGCGCCAT
 and the corresponding tag is {\tt M5:caad65b937c4bc0b33c08f62a9fb5411}.
 
 \subsection{The alignment section: mandatory fields}\label{sec:alnrecord}
-In the SAM format, each alignment line typically represents the linear
-alignment of a segment. Each line has 11
-mandatory fields. These fields always appear in the same order and must be
-present, but their values can be `0' or `*' (depending on the field) if the
-corresponding information is unavailable. The following table gives an overview
-of the mandatory fields in the SAM format:
+In the SAM format, each alignment line typically represents the linear alignment of a segment.
+Each line consists of 11~or more TAB-separated fields.
+The first eleven fields are always present and in the order shown below; if the information represented by any of these fields is unavailable, that field's value will be a placeholder, either~`{\tt 0}' or~`{\tt *}' as determined by the field's type.
+The following table gives an overview of these mandatory fields in the SAM format:
 \begin{center}
 \small
 \begin{tabular}{rllll}
@@ -317,19 +409,26 @@ of the mandatory fields in the SAM format:
   {\bf Col} & {\bf Field} & {\bf Type} & {\bf Regexp/Range} & {\bf Brief description} \\
   \hline
   1 & {\sf QNAME} & String & \verb:[!-?A-~]{1,254}: & Query template NAME\\
-  2 & {\sf FLAG} & Int & {\tt [0,2$^{16}$-1]} & bitwise FLAG \\
-  3 & {\sf RNAME} & String & {\tt \char92*|[!-()+-\char60\char62-\char126][!-\char126]*} & Reference sequence NAME\\
-  4 & {\sf POS} & Int & {\tt [0,2$^{31}$-1]} & 1-based leftmost mapping POSition \\
-  5 & {\sf MAPQ} & Int & {\tt [0,2$^8$-1]} & MAPping Quality \\
+  2 & {\sf FLAG} & Int & $[0,\,2^{16}-1]$ & bitwise FLAG \\
+  3 & {\sf RNAME} & String & {\tt \verb"\*"|\rnameRegexp} & Reference sequence NAME\footnotemark \\
+  4 & {\sf POS} & Int & $[0,\,2^{31}-1]$ & 1-based leftmost mapping POSition \\
+  5 & {\sf MAPQ} & Int & $[0,\,2^8-1]$ & MAPping Quality \\
   6 & {\sf CIGAR} & String & {\tt \char92*|([0-9]+[MIDNSHPX=])+} & CIGAR string \\
-  7 & {\sf RNEXT} & String & {\tt \char92*|=|[!-()+-\char60\char62-\char126][!-\char126]*} & Ref. name of the mate/next read\\
-  8 & {\sf PNEXT} & Int & {\tt [0,2$^{31}$-1]} & Position of the mate/next read \\
-  9 & {\sf TLEN} & Int & {\tt [-2$^{31}$+1,2$^{31}$-1]} & observed Template LENgth \\
+  7 & {\sf RNEXT} & String & {\tt \verb"\*"|=|\rnameRegexp} & Reference name of the mate/next read \\
+  8 & {\sf PNEXT} & Int & $[0,\,2^{31}-1]$ & Position of the mate/next read \\
+  9 & {\sf TLEN} & Int & $[-2^{31}+1,\,2^{31}-1]$ & observed Template LENgth \\
   10 & {\sf SEQ} & String & {\tt \char92*|[A-Za-z=.]+} & segment SEQuence\\
   11 & {\sf QUAL} & String & {\tt [!-\char126]+} & ASCII of Phred-scaled base QUALity+33 \\
   \hline
 \end{tabular}
 \end{center}
+
+\footnotetext{Reference sequence names may contain any printable ASCII characters with the exception of certain punctuation characters, and may not start with `{\tt *}' or `{\tt =}'.
+See Section~\ref{sec:charset} for details and an explanation of the {\tt [\cclass{rname}]} notation.}
+
+\noindent
+All mapped segments in alignment lines are represented on the forward genomic strand.
+For segments that have been mapped to the reverse strand, the recorded {\sf SEQ} is reverse complemented from the original unmapped sequence and {\sf CIGAR}, {\sf QUAL}, and strand-sensitive optional fields are reversed and thus recorded consistently with the sequence bases as represented.
 
 \begin{enumerate}
 \item {\sf QNAME}: Query template NAME. Reads/segments having identical {\sf QNAME}
@@ -377,7 +476,8 @@ Each bit is explained in the following table:
   \item Bit 0x10 indicates whether {\sf SEQ} has been reverse complemented
     and {\sf QUAL} reversed.
     When bit~0x4 is unset, this corresponds to the strand to which the
-    segment has been mapped.
+    segment has been mapped: bit~0x10 unset indicates the forward strand,
+    while set indicates the reverse strand.
     When 0x4 is set, this indicates whether the unmapped read is stored
     in its original orientation as it came off the sequencing machine.
   \item Bits 0x40 and 0x80 reflect the read ordering within each template
@@ -458,17 +558,73 @@ Each bit is explained in the following table:
   next read.  If {\sf
     RNEXT} is `*', no assumptions can be made on {\sf PNEXT} and bit
   0x20.
-\item {\sf PNEXT}: Position of the primary alignment of the NEXT read in the template. Set as
+\item {\sf PNEXT}: 1-based Position of the primary alignment of the NEXT read in the template. Set as
   0 when the information is unavailable. This field equals {\sf POS} at the primary line of
   the next read. If {\sf PNEXT} is 0, no assumptions can be made on
   {\sf RNEXT} and bit 0x20.
 \item {\sf TLEN}: signed observed Template LENgth. If all segments are
-  mapped to the same reference, the unsigned observed template length
-  equals the number of bases from the leftmost mapped base to the
-  rightmost mapped base. The leftmost segment has a plus sign and the
-  rightmost has a minus sign. The sign of segments in the middle is
-  undefined. It is set as 0 for single-segment template or when the
-  information is unavailable.
+  mapped to the same reference sequence, the absolute value of TLEN
+  equals the distance between the mapped end of the template and the
+  mapped start of the template, inclusively (i.e., $\mbox{end}-\mbox{start}+1$).%
+  \footnote{Thus a segment
+    aligning in the forward direction at base 100 for length 50 and a
+    segment aligning in the reverse direction at base 200 for length
+    50 indicate the template covers bases 100 to 249 and has length
+    150.}
+  Note that \textit{mapped base} is defined to be one that aligns to the
+  reference as described by CIGAR, hence excludes soft-clipped bases.
+  The TLEN field is positive for the leftmost segment of the template,
+  negative for the rightmost, and the sign for any middle segment is
+  undefined.  If segments cover the same coordinates then the choice
+  of which is leftmost and rightmost is arbitrary, but the two ends
+  must still have differing signs.
+  It is set as 0 for a single-segment template or when the
+  information is unavailable (e.g., when the first or last segment
+  of a multi-segment template is unmapped or when the two are mapped
+  to different reference sequences).
+
+% If future updates cause this footnote to spill over the page boundary
+% try e.g. \enlargethispage{-10em} to adjust where this page ends.
+  The intention of this field is to indicate where the other end of
+  the template has been aligned without needing to read the remainder
+  of the SAM file.  Unfortunately there has been no
+  clear consensus on the definitions of the template mapped start
+  and end.  Thus the exact definitions are implementation-defined.%
+\footnote{The earliest versions of this specification used $5'$ to
+  $5'$ (in original orientation, TLEN\#1; dashed parts of the reads
+  indicate soft-clipped bases) while later ones used leftmost to
+  rightmost mapped base (TLEN\#2).  Note: these two definitions agree in most
+  alignments, but differ in the case of overlaps where the first
+  segment aligns beyond the start of the last segment.
+
+\begin{center}
+\begin{tikzpicture}[
+    thick, xscale=2, yscale=1.8,
+    read/.style={line width=0.4mm},
+]
+\draw[|-, read] (0,0)   -- (0.8,0)  node[midway, above] {Read 1};
+\draw[->, read, dashed] (0.85,0) -- (1.2,0);
+\draw[|-, read] (3,0) -- (2.2,0) node[midway, above] {Read 2};
+\draw[->, read, dashed] (2.25,0) -- (1.8,0);
+\draw[|<->|,gray!120]     (0,-.2) -- +(3,0) node[midway, below] {TLEN \#1/\#2};
+\node at (1.5,-0.7) {\textit{Unambiguous scenario}};
+\end{tikzpicture}
+\hspace{3cm}% No space means side by side
+\begin{tikzpicture}[
+    thick, xscale=1,yscale=0.9,
+    read/.style={line width=0.4mm},
+]
+\draw[|-, read]         (2.2,0)   -- (5.2,0)    node[very near end, above] {Read 1};
+\draw[->, read, dashed] (5.3,0)   -- (6,0);
+\draw[-|, read]         (1,.3)    -- (4,.3)     node[very near start , above] {Read 2};
+\draw[->, read, dashed] (0.9,.3)  -- (0,.3);
+\draw[|<->|,gray!120]   (1,-0.3)  -- (5.2,-0.3) node[midway, below] {TLEN\#2};
+\draw[|<->|,gray!120]   (2.2,0.65)-- (4,0.65)    node[midway, above] {TLEN\#1};
+\node at (2.7,-1) {\textit{Ambiguous scenario}};
+\end{tikzpicture}
+\end{center}
+}
+
 \item {\sf SEQ}: segment SEQuence. This field can be a `*' when the
   sequence is not stored. If not a `*', the length of the sequence must
   equal the sum of lengths of {\tt M/I/S/=/X} operations in {\sf CIGAR}.
@@ -499,7 +655,7 @@ i & {\tt [-+]?[0-9]+} & Signed integer\footnotemark\\
 f & {\tt [-+]?[0-9]*\char92.?[0-9]+([eE][-+]?[0-9]+)?} & Single-precision floating number \\
 Z & {\tt [\,\,\,!-\char126]*} & Printable string, including space\\
 H & {\tt ([0-9A-F][0-9A-F])*} & Byte array in the Hex format\footnotemark\\
-B & {\tt [cCsSiIf](,[-+]?[0-9]*\char92.?[0-9]+([eE][-+]?[0-9]+)?)+} & Integer or numeric array\\
+B & {\tt [cCsSiIf](,[-+]?[0-9]*\char92.?[0-9]+([eE][-+]?[0-9]+)?)*} & Integer or numeric array\\
 \hline
 \end{tabular}
 \addtocounter{footnote}{-1}
@@ -508,7 +664,7 @@ explicitly limited in SAM.  However, BAM can represent values in the
 range~$[-2^{31},2^{32})$, so in practice this is the realistic range
 of values for SAM's `{\tt i}' as well.}
 \stepcounter{footnote}
-\footnotetext{For example, a byte array $[{\tt 0x1a},{\tt 0xe3},{\tt 0x1}]$ corresponds to a Hex string `{\tt 1AE301}'.}
+\footnotetext{For example, the six-character Hex string `{\tt 1AE301}' represents the byte array $[{\tt 0x1a},{\tt 0xe3},{\tt 0x1}]$.}
 \end{center}
 For an integer or numeric array (type `{\tt B}'), the first letter indicates the type of numbers
 in the following comma separated array. The letter can be one of `{\tt cCsSiIf}', corresponding to
@@ -560,7 +716,8 @@ specific software package for it to function properly.
   \item If {\sf POS} plus the sum of lengths of {\tt M/=/X/D/N}
     operations in {\sf CIGAR} exceeds the length specified in the {\tt
       LN} field of the {\tt @SQ} header line (if exists) with an SN
-    equal to {\sf RNAME}, the alignment should be unmapped.
+    equal to {\sf RNAME}, the alignment should be unmapped, unless the
+    reference sequence is circular (see below).
   \item Unmapped reads should be stored in the orientation in which they came
     off the sequencing machine and have their {\sf reverse} flag bit~(0x10)
     correspondingly unset.
@@ -582,6 +739,21 @@ specific software package for it to function properly.
     should be present.
   \item The {\tt NM} tag should be present.
   \end{enumerate}
+
+\item Circular reference sequences
+
+Mappings that cross the coordinate `join' in circular reference sequences (i.e., those whose {\tt @SQ} headers specify {\tt TP:circular}) may be represented as follows:
+  \begin{enumerate}[label=\arabic*]
+  \item (Preferred)
+As usual {\sf POS} should be between 1 and the {\tt @SQ} header's {\tt LN} value, but {\sf POS} plus the sum of the lengths of {\tt M/=/X/D/N} {\sf CIGAR} operations may exceed {\tt LN}.
+Coordinates greater than~{\tt LN} are interpreted by subtracting {\tt LN} so that bases at $\texttt{LN}+1, \texttt{LN}+2, \texttt{LN}+3, \ldots$ are considered to be mapped at positions $1,2,3,\ldots$; thus each (1-based) position $p$ is interpreted as $((p-1)\bmod\texttt{LN})+1$.%
+\footnote{The impact of this representation on indexing and random access is yet to be explored by implementations.}
+
+  \item
+Alternatively, such alignments may be split across several records: one record representing the initial portion of the segment ending at~{\tt LN}, one representing the final portion starting from~1, and any other records representing additional portions in between spanning the entire reference sequence.
+One record (chosen arbitrarily) is considered primary and the remainder have their {\sf supplementary} flag bit (0x800) set.
+  \end{enumerate}
+
 \item Annotation dummy reads:
   These have {\sf SEQ} set to {\tt *}, {\sf FLAG} bits 0x100 and 0x200
   set (secondary and filtered), and a {\tt CT} tag.
@@ -591,10 +763,10 @@ specific software package for it to function properly.
 %  (reverse complemented) should be set, and otherwise not set.
   \item If you wish to store free text in a {\tt CT} tag, use the
   \emph{key} value {\tt Note} (uppercase N) to match GFF3.
-  \item Multi-segment annotation (e.g. a gene with introns) should be
+  \item Multi-segment annotation (e.g., a gene with introns) should be
   described with multiple lines in SAM (like a multi-segment read).
-  Where there is a clear biological direction (e.g. a gene), the first
-  segment ({\sf FLAG} bit 0x40) is used for the first section (e.g. the
+  Where there is a clear biological direction (e.g., a gene), the first
+  segment ({\sf FLAG} bit 0x40) is used for the first section (e.g., the
   $5'$ end of the gene). Thus a GenBank entry location like
   {\tt complement(join(85052..85354, 85441..85621, 86097..86284))}
   would have three lines in SAM with a common {\sf QNAME}: %And three lines in GFF3 too.
@@ -658,7 +830,12 @@ reference sequence, but it is also able to describe alignments against a padded
 reference. In the latter case, we say we are using a \emph{padded SAM}. A padded
 SAM is a valid SAM, but with the difference that the reference and positions in
 use are padded. There may be more than one way to describe the padded
-representation. We recommend the following.
+representation.
+We recommend the following; see also the discussion in Cock {\it et al.}%
+\footnote{Peter J. A. Cock, James K. Bonfield, Bastien Chevreux, and Heng Li,
+{\bf SAM/BAM format v1.5 extensions for \emph{de novo} assemblies},
+{\sl bioRxiv 020024};
+\href{http://dx.doi.org/10.1101/020024}{doi:10.1101/020024}.}
 
 In a padded SAM, alignments and coordinates are described with respect to the
 padded reference sequence. Unlike traditional padded representations like
@@ -678,7 +855,7 @@ three alignments are all shifted by 2. {\sf CIGAR} of alignments bridging the
 
 \begin{framed}\small
 \begin{verbatim}
-@HD VN:1.5 SO:coordinate
+@HD VN:1.6 SO:coordinate
 @SQ SN:ref LN:47
 ref   516 ref  1  0 14M2D31M   *  0   0 AGCATGTTAGATAAGATAGCTGTGCTAGTAGGCAGTCAGCGCCAT *
 r001   99 ref  7 30 14M1D3M    = 39  41 TTAGATAAAGGATACTG *
@@ -696,8 +873,10 @@ sequence and the reference annotations in SAM when necessary. For a reference
 sequence in SAM, {\sf QNAME} should be identical to {\sf RNAME}, {\sf POS} set
 to 1 and {\sf FLAG} to 516 (filtered and unmapped); for an annotation, {\sf
 FLAG} should be set to 768 (filtered and secondary) with no restriction to {\sf
-QNAME}. Dummy reads for annotation would typically have an `{\tt CT}' tag to
-hold the annotation information, see Section~\ref{sec:recommended-practice}.
+QNAME}.
+Dummy reads for annotation would typically have a {\tt CT} tag to hold the annotation information; see the discussion of dummy reads in Section~\ref{sec:recommended-practice}.
+See also the separate {\sl Optional Fields Specification} for full details of the {\tt CT} and {\tt PT} annotation tags.%
+\footnote{See \emph{Annotation and Padding} in \href{http://samtools.github.io/hts-specs/SAMtags.pdf}{\tt SAMtags.pdf}.}
 
 \pagebreak
 
@@ -797,7 +976,7 @@ disallowed.
 An end-of-file (EOF) trailer or marker block should be written at the end
 of BGZF files, so that unintended file truncation can be easily detected.
 The EOF marker block is a particular empty\footnotemark\ BGZF block
-encoded with the default {\sf zlib} compression level setttings,
+encoded with the default {\sf zlib} compression level settings,
 and consists of the following 28~hexadecimal bytes:
 \begin{center}
 \texttt{1f 8b 08 04 00 00 00 00 00 ff 06 00 42 43 02 00 1b 00 03 00 00 00 00 00 00 00 00 00}
@@ -826,7 +1005,7 @@ When reading a BGZF file in sequential streaming fashion, ideally this
 EOF check should be performed when the end of the stream is reached.
 Checking that the final BGZF block in the file decompresses to empty
 or checking that the last 28 bytes of the file are exactly the bytes
-above are both sufficent tests; each is likely more convenient in
+above are both sufficient tests; each is likely more convenient in
 different circumstances.
 
 \footnotetext{It is useful to produce a diagnostic at the beginning of
@@ -850,72 +1029,150 @@ underlined word in uppercase denotes a field in the SAM format.
   \cline{1-6}
   \multicolumn{3}{|c|}{\bf Field} & \multicolumn{1}{c|}{\bf Description} & \multicolumn{1}{c|}{\bf Type} & \multicolumn{1}{c|}{\bf Value} \\\cline{1-6}
   \multicolumn{3}{|l|}{\sf magic} & BAM magic string & {\tt char[4]} & {\tt BAM\char92 1}\\\cline{1-6}
-  \multicolumn{3}{|l|}{\sf l\_text} & Length of the header text, including any {\tt NUL} padding & {\tt int32\_t} & \\\cline{1-6}
+  \multicolumn{3}{|l|}{\sf l\_text} & Length of the header text, including any {\tt NUL} padding & {\tt uint32\_t} & $< 2^{31}$ \\\cline{1-6}
   \multicolumn{3}{|l|}{\sf text} & Plain header text in SAM; not necessarily {\tt NUL}-terminated & {\tt char[{\sf l\_text}]} & \\\cline{1-6}
-  \multicolumn{3}{|l|}{\sf n\_ref} & \# reference sequences & {\tt int32\_t} & \\\cline{1-6}
+  % Pedantically this should be <= but we restrict |refs| by one so n_ref fits in a signed 32-bit int.
+  \multicolumn{3}{|l|}{\sf n\_ref} & \# reference sequences & {\tt uint32\_t} & $< 2^{31}$ \\\cline{1-6}
   \multicolumn{6}{|c|}{\textcolor{gray}{\it List of reference information (n=n\_ref)}} \\\cline{2-6}
-  & \multicolumn{2}{l|}{\sf l\_name} & Length of the reference name plus 1 (including {\tt NUL}) & {\tt int32\_t} & \\\cline{2-6}
+  & \multicolumn{2}{l|}{\sf l\_name} & Length of the reference name plus 1 (including {\tt NUL}) & {\tt uint32\_t} & \memlimited \\\cline{2-6}
   & \multicolumn{2}{l|}{\sf name} & Reference sequence name; {\tt NUL}-terminated & {\tt char[{\sf l\_name}]} & \\\cline{2-6}
-  & \multicolumn{2}{l|}{\sf l\_ref} & Length of the reference sequence & {\tt int32\_t} & \\\cline{1-6}
+  & \multicolumn{2}{l|}{\sf l\_ref} & Length of the reference sequence & {\tt uint32\_t} & $< 2^{31}$ \\\cline{1-6}
   \multicolumn{6}{|c|}{\textcolor{gray}{\it List of alignments (until the end of the file)}} \\\cline{2-6}
-  & \multicolumn{2}{l|}{\sf block\_size} & Length of the remainder of the alignment record & {\tt int32\_t} & \\\cline{2-6}
-  & \multicolumn{2}{l|}{\sf refID} & Reference sequence ID, $-1\leq{\sf refID}<{\sf n\_ref}$; -1 for a read without a mapping position. & {\tt int32\_t} & [-1] \\\cline{2-6}
+  & \multicolumn{2}{l|}{\sf block\_size} & Total length of the alignment record, excluding this field & {\tt uint32\_t} & \memlimited \\\cline{2-6}
+  & \multicolumn{2}{l|}{\sf refID} & Reference sequence ID, $-1\leq{\sf refID}<{\sf n\_ref}$; -1 for a read without a mapping position & {\tt int32\_t} & [-1] \\\cline{2-6}
   & \multicolumn{2}{l|}{\sf pos} & 0-based leftmost coordinate ($=\underline{\sf POS}-1$)& {\tt int32\_t} & [-1]\\\cline{2-6}
-  & \multicolumn{2}{l|}{\sf bin\_mq\_nl} & {\tt{\sf bin}\char60\char60 16\char124\underline{\sf MAPQ}\char60\char60 8\char124{\sf l\_read\_name}}; {\sf bin} is computed from the mapping position;\footnotemark\ {\sf l\_read\_name} is the length of {\sf read\_name} below ($={\sf length}(\underline{\sf QNAME})+1$). & {\tt uint32\_t} & \\\cline{2-6}
-  & \multicolumn{2}{l|}{\sf flag\_nc} & {\tt \underline{\sf FLAG}\char60\char60 16\char124{\sf n\_cigar\_op}};\footnotemark\ {\sf n\_cigar\_op} is the number of operations in \underline{\sf CIGAR}\footnotemark. & {\tt uint32\_t} & \\\cline{2-6}
-  & \multicolumn{2}{l|}{\sf l\_seq} & Length of \underline{\sf SEQ} & {\tt int32\_t} & \\\cline{2-6}
-  & \multicolumn{2}{l|}{\sf next\_refID} & Ref-ID of the next segment ($-1\le{\sf mate\_refID}<{\sf n\_ref}$) & {\tt int32\_t} & [-1] \\\cline{2-6}
+  & \multicolumn{2}{l|}{\sf l\_read\_name} & Length of {\sf read\_name} below ($={\sf length}(\underline{\sf QNAME})+1$) & {\tt uint8\_t} & \\\cline{2-6}
+  & \multicolumn{2}{l|}{\sf mapq} & Mapping quality (=\underline{\sf MAPQ}) & {\tt uint8\_t} & \\\cline{2-6}
+  & \multicolumn{2}{l|}{\sf bin} & BAI index bin, see Section~\ref{sec:bin-field}  & {\tt uint16\_t} & \\\cline{2-6}
+  & \multicolumn{2}{l|}{\sf n\_cigar\_op} & Number of operations in \underline{\sf CIGAR}, see Section~\ref{sec:ncigar} & {\tt uint16\_t} & \\\cline{2-6}
+  & \multicolumn{2}{l|}{\sf flag} & Bitwise flags (= \underline{\sf FLAG})\footnotemark\ & {\tt uint16\_t} & \\\cline{2-6}
+  & \multicolumn{2}{l|}{\sf l\_seq} & Length of \underline{\sf SEQ} & {\tt uint32\_t} & \memlimited \\\cline{2-6}
+  & \multicolumn{2}{l|}{\sf next\_refID} & Ref-ID of the next segment ($-1\le{\sf next\_refID}<{\sf n\_ref}$) & {\tt int32\_t} & [-1] \\\cline{2-6}
   & \multicolumn{2}{l|}{\sf next\_pos} & 0-based leftmost pos of the next segment ($=\underline{\sf PNEXT}-1$) & {\tt int32\_t} & [-1] \\\cline{2-6}
   & \multicolumn{2}{l|}{\sf tlen} & Template length ($=\underline{\sf TLEN}$) & {\tt int32\_t} & [0] \\\cline{2-6}
-  & \multicolumn{2}{l|}{\sf read\_name} & Read name,\footnotemark\ {\tt NUL}-terminated (\underline{\sf QNAME} plus a trailing `{\tt \char92 0}') & {\tt char[{\sf l\_read\_name}]} & \\\cline{2-6}
+  & \multicolumn{2}{l|}{\sf read\_name} & Read name, {\tt NUL}-terminated (\underline{\sf QNAME} with trailing `{\tt\verb"\0"}')\footnotemark & {\tt char[{\sf l\_read\_name}]} & \\\cline{2-6}
   & \multicolumn{2}{l|}{\sf cigar} & CIGAR: {\tt {\sf op\_len}\char60\char60 4\char124{\sf op}}. `{\tt MIDNSHP\char61X}'$\to$`012345678' & {\tt uint32\_t[{\sf n\_cigar\_op}]} & \\\cline{2-6}
-  & \multicolumn{2}{l|}{\sf seq} & 4-bit encoded read: `{\tt =ACMGRSVTWYHKDBN}'$\to[0,15]$; other characters mapped to `{\tt N}'; high nybble first (1st base in the highest 4-bit of the 1st byte) & {\tt uint8\_t[({\sf l\_seq}+1)/2]} & \\\cline{2-6}
-  & \multicolumn{2}{l|}{\sf qual} & Phred base quality (a sequence of {\tt 0xFF} if absent) & {\tt char[{\sf l\_seq}]} & \\\cline{2-6}
+  & \multicolumn{2}{l|}{\sf seq} & 4-bit encoded read: `{\tt =ACMGRSVTWYHKDBN}'$\to[0,15]$. See Section~\ref{sec:seq} & {\tt uint8\_t[({\sf l\_seq}+1)/2]} & \\\cline{2-6}
+  & \multicolumn{2}{l|}{\sf qual} & Phred-scaled base qualities. See Section~\ref{sec:seq} & {\tt char[{\sf l\_seq}]} & \\\cline{2-6}
   & \multicolumn{5}{c|}{\textcolor{gray}{\it List of auxiliary data (until the end of the alignment block)}} \\\cline{3-6}
   & & {\sf tag} & Two-character tag & {\tt char[2]} & \\\cline{3-6}
-  & & {\sf val\_type} & Value type: {\tt AcCsSiIfZHB}\footnotemark$^,$\footnotemark & {\tt char} & \\\cline{3-6}
+  & & {\sf val\_type} & Value type: {\tt AcCsSiIfZHB}, see Section~\ref{sec:aux-type-codes} & {\tt char} & \\\cline{3-6}
   & & {\sf value} & Tag value & (by {\sf val\_type}) &\\
   \cline{1-6}
 \end{tabular}}
 \end{table}
-\addtocounter{footnote}{-5}
-\footnotetext{{\sf BIN} is calculated using the {\sf reg2bin()} function
-in Section~\ref{sec:code}. For mapped reads this uses {\sf POS-1}
-(i.e.,~0-based left position) and the alignment end point using the
-alignment length from the {\sf CIGAR} string. For unmapped reads
-(e.g.,~paired end reads where only one part is mapped, see
-Section~\ref{sec:recommended-practice}) treat the alignment as
-being length one. Note unmapped reads with {\sf POS} $0$ (which
-becomes $-1$ in BAM) therefore use {\sf reg2bin(-1, 0)} which
-is $4680$.}
-\stepcounter{footnote}
+\addtocounter{footnote}{-1}
 \footnotetext{As noted in Section~\ref{sec:alnrecord}, reserved {\sf FLAG} bits
 should be written as zero and ignored on reading by current software.}
 \stepcounter{footnote}
-\footnotetext{With 16 bits, {\sf n\_cigar\_op} can keep at most 65535 CIGAR
+\footnotetext{For backward compatibility, an absent {\sf QNAME} (represented as `{\tt *}' in SAM) is stored as a C string {\tt "*\char92 0"}.}
+
+\noindent
+Most length and count fields described as {\tt uint32\_t} have additional constraints on their range:
+$\mbox{\sf l\_text} < 2^{31}$ due to implementation limits;
+$\mbox{\sf n\_ref} < 2^{31}$ because {\sf refID} and {\sf next\_refID} are signed;
+$\mbox{\sf l\_ref} < 2^{31}$ because {\sf tlen} is signed;
+those marked ``\textit{limited}'' are limited by available memory and the practical size of the data represented well before they are limited by, e.g., Java's signed 32-bit integer maximum array size.
+
+\subsubsection{BIN field calculation}\label{sec:bin-field}
+{\sf BIN} is calculated using the {\sf reg2bin()} function in
+Section~\ref{sec:code}.
+For mapped reads this uses {\sf POS-1} (i.e.,~0-based left position) and the
+alignment end point using the alignment length from the {\sf CIGAR} string.
+For unmapped reads (e.g.,~paired end reads where only one part is mapped, see
+Section~\ref{sec:recommended-practice}) the alignment is treated as
+being length one.
+Note unmapped reads with {\sf POS} $0$ (which becomes $-1$ in BAM) therefore
+use {\sf reg2bin(-1, 0)} which is $4680$.
+
+\subsubsection{N\_CIGAR\_OP field}\label{sec:ncigar}
+With 16 bits, {\sf n\_cigar\_op} can keep at most 65535 CIGAR
 operations in BAM files. For an alignment with more CIGAR operations, BAM
 stores the real {\sf CIGAR}, encoded the same way as the {\sf cigar} field in
 BAM, in the {\tt CG} optional tag of type `{\tt B,I}', and sets {\sf CIGAR} to
-`{\tt kSmN}' as a placeholder, where `{\tt k}' equals {\sf l\_seq}, `{\tt m}'
+`\textit{k}{\tt S}\textit{m}{\tt N}' as a placeholder, where `\textit{k}' equals {\sf l\_seq}, `\textit{m}'
 is the reference sequence length in the alignment, and `{\tt S}' and `{\tt N}'
-are the soft-clipping and reference-clip CIGAR operators, respectively -- i.e.
-in the binary form, {\sf n\_cigar\_op}=2 and {\sf cigar}={\tt [k\char60\char60
-4\char124{4},m\char60\char60 4\char124{3}]}. If tag {\tt CG} is present and
+are the soft-clipping and reference-clip CIGAR operators, respectively---i.e.,
+in the binary form, {\sf n\_cigar\_op}=2 and {\sf cigar}={\tt [\textit{k}\char60\char60
+4\char124{4},\textit{m}\char60\char60 4\char124{3}]}. If tag {\tt CG} is present and
 the first CIGAR operation clips the entire read, a BAM parsing library is
 expected to update {\sf n\_cigar\_op} and {\sf cigar} with the real CIGAR
-stored in the {\tt CG} tag and remove the now-redundant {\tt CG} tag.}
-\stepcounter{footnote}
-\footnotetext{For backward compatibility, a {\sf QNAME} `{\tt *}' is stored as a C string {\tt "*\char92 0"}.}
-\stepcounter{footnote}
-\footnotetext{An integer may be stored as one of `{\tt cCsSiI}' in BAM, representing {\tt int8\_t}, {\tt uint8\_t},
-{\tt int16\_t}, {\tt uint16\_t}, {\tt int32\_t} and {\tt uint32\_t}, respectively.
-In SAM, all single (i.e., non-array) integer types are stored as `{\tt i}', regardless of magnitude.}
-\stepcounter{footnote}
-\footnotetext{A `{\tt B}'-typed (array) tag--value pair is stored as follows. The first two bytes keep the two-character tag. The 3rd byte is always `{\tt B}'.
-	The 4th byte, matching {\tt /\char94[cCsSiIf]\$/}, indicates the type of an element in the array.
-	Bytes from 5 to 8 encode a little-endian 32-bit integer which gives the number of elements in the array.
-	Bytes starting from the 9th store the array in the little-endian byte order; the number of these
-	bytes is determined by the type and the length of the array.}
+stored in the {\tt CG} tag and remove the now-redundant {\tt CG} tag.
+
+\subsubsection{SEQ and QUAL encoding}\label{sec:seq}
+Sequence is encoded in 4-bit values, with adjacent bases packed into the same byte starting with the highest 4 bits first.
+When {\sf l\_seq} is odd the bottom 4 bits of the last byte are undefined, but we recommend writing these as zero.
+The case-insensitive base codes `{\tt =ACMGRSVTWYHKDBN}' are mapped to $[0,15]$ respectively with all other characters mapping to `{\tt N}' (value 15).
+
+Omitted sequence, represented in SAM as `{\tt *}', is represented by {\sf l\_seq} being 0 and {\sf seq} and {\sf qual} zero-length.
+
+Base qualities are stored as bytes in the range $[0,93]$, without any +33 conversion to printable ASCII.
+When base qualities are omitted but the sequence is not, {\sf qual} is filled with {\tt 0xFF} bytes (to length {\sf l\_seq}).
+
+\subsubsection{Auxiliary data encoding}\label{sec:aux-type-codes}
+Optional alignment fields are stored immediately after each other immediately
+following the {\sf qual} field, and are included in {\sf block\_size}.
+Each field is represented as a two-character tag followed by a single type
+character and then its value, whose length is determined by the field's type.
+
+\newcommand*{\tagfield}[2]{\firstbytebox{2}{\em tag}\bytebox{1}{\tt #1}#2}
+
+Single character `{\tt A}' fields have a total length of 4~bytes,
+with the value represented as a single byte:
+\begin{center}\small\byteboxsetup
+\tagfield{A}{\bytebox{1}{char}}
+\end{center}
+
+While all single (i.e., non-array) integer types are stored in SAM as `{\tt i}',
+in BAM any of `{\tt cCsSiI}' may be used together with the correspondingly-sized
+binary integer value, chosen according to the field value's magnitude.%
+\footnote{The signedness and size used for each integer value is an
+implementation choice, but is typically the smallest that suffices.}
+Similarly floating point `{\tt f}' fields are represented as IEEE 754-2008
+binary32 values.
+Thus BAM numeric fields have a total length of~4, 5, or~7~bytes:
+\begin{center}\small\byteboxsetup\begin{tabular}{l@{\hspace{1in}}l}
+\tagfield{c}{\bytebox{1}{i8}} \quad (i.e., {\tt int8\_t})
+    & \tagfield{i}{\bytebox{4}{int32\_t}} \\
+\tagfield{C}{\bytebox{1}{u8}} \quad (i.e., {\tt uint8\_t})
+    & \tagfield{I}{\bytebox{4}{uint32\_t}} \\
+\tagfield{s}{\bytebox{2}{int16\_t}}
+    & \tagfield{f}{\bytebox{4}{float}} \\
+\tagfield{S}{\bytebox{2}{uint16\_t}}
+    &
+\end{tabular}\end{center}
+
+\newcommand*{\byteboxvector}[2]{\bytebox{#1}{#2}\bytebox{#1}{#2}\makebox[1.5\bytewidth][c]{$\cdots$}\firstbytebox{#1}{#2}}
+
+String fields and hex-formatted byte arrays are represented as
+{\tt NUL}-terminated text strings:%
+\footnote{The BAM representation of `{\tt H}' field values as textual
+hexadecimal digits rather than binary data is for historical reasons.
+Modern applications may prefer to use `{\tt B,C}' array fields rather
+than `{\tt H}' fields.}
+\begin{center}\small\byteboxsetup\begin{tabular}{l}
+\tagfield{Z}{\byteboxvector{1}{char}\bytebox{1}{\tt NUL}} \\
+\tagfield{H}{\byteboxvector{2}{hex hex}\bytebox{1}{\tt NUL}}
+\end{tabular}\end{center}
+
+\newcommand*{\arraytagfield}[3]{\tagfield{B}{\bytebox{1}{\tt #1}\bytebox{4}{\em count}\byteboxvector{#2}{#3}}}
+
+\begin{samepage}
+The representation of a `{\tt B}' array field starts with a sub-type character
+similar to the numeric field types above and a \emph{count} ({\tt uint32\_t}, but
+limited by memory and {\sf block\_size}) giving the number of elements in the array.
+The array elements follow, encoded as binary integers or IEEE floats sized
+according to the sub-type:
+\begin{center}\small\byteboxsetup\begin{tabular}{l}
+\arraytagfield{c}{1}{i8} \quad (i.e., {\tt int8\_t} elements) \\
+\arraytagfield{C}{1}{u8} \quad (i.e., {\tt uint8\_t} elements) \\
+\arraytagfield{s}{2}{int16\_t} \\
+\arraytagfield{S}{2}{uint16\_t} \\
+\arraytagfield{i}{4}{int32\_t} \\
+\arraytagfield{I}{4}{uint32\_t} \\
+\arraytagfield{f}{4}{float}
+\end{tabular}\end{center}
+\end{samepage}
 
 \pagebreak
 
@@ -988,8 +1245,8 @@ boundaries.
 For an alignment starting beyond 64Mbp, we always need to seek to some
 chunks in bin 0, which can be avoided by using a linear index. In the
 linear index, for each tiling 16384bp window on the reference, we record
-the smallest file offset of the alignments that start in the
-window. Given a region [rbeg,rend), we only need to visit a chunk whose
+the smallest file offset of the alignments that overlap with the
+window. Given a region [rbeg,\,rend), we only need to visit a chunk whose
 end file offset is larger than the file offset of the 16kbp window
 containing rbeg.
 
@@ -1015,37 +1272,39 @@ scheme which consists of three types of bins: bin 0 spans 0-144kbp, bin
 An alignment starting at 65kbp and ending at 67kbp would have a bin
 number 8, which is the smallest bin containing the alignment. Similarly,
 an alignment starting at 51kbp and ending at 70kbp would go to bin 2,
-while an alignment between [40k,49k] to bin 0. Suppose we want to find
-all the alignments overlapping region [65k,71k). We first calculate that
+while an alignment between [40k,\,49k] to bin 0. Suppose we want to find
+all the alignments overlapping region [65k,\,71k). We first calculate that
 bin 0, 2 and 8 overlap with this region and then traverse the alignments
 in these bins to find the required alignments. With a binning index
-alone, we need to visit the alignment at [40k,49k] as it belongs to bin
+alone, we need to visit the alignment at [40k,\,49k] as it belongs to bin
 0. But with a linear index, we know that such an alignment stops before
 64kbp and cannot overlap the specified region. A seek call can thus be
 saved.
 
 \subsection{The BAI index format for BAM files}
 \begin{table}[ht]
-{\small
+\centering\small
 \begin{tabular}{|l|l|l|l|l|l|r|}
   \cline{1-7}
   \multicolumn{4}{|c|}{\bf Field} & \multicolumn{1}{c|}{\bf Description} & \multicolumn{1}{c|}{\bf Type} & \multicolumn{1}{c|}{\bf Value} \\\cline{1-7}
   \multicolumn{4}{|l|}{\sf magic} & Magic string & {\tt char[4]} & {\tt BAI\char92 1}\\\cline{1-7}
-  \multicolumn{4}{|l|}{\sf n\_ref} & \# reference sequences & {\tt int32\_t} & \\\cline{1-7}
+  \multicolumn{4}{|l|}{\sf n\_ref} & \# reference sequences & {\tt uint32\_t} & $< 2^{31}$ \\\cline{1-7}
   \multicolumn{7}{|c|}{\textcolor{gray}{\it List of indices (n=n\_ref)}} \\\cline{2-7}
-  & \multicolumn{3}{l|}{\sf n\_bin} & \# distinct bins (for the binning index) & {\tt int32\_t} & \\\cline{2-7}
+  & \multicolumn{3}{l|}{\sf n\_bin} & \# distinct bins (for the binning index) & {\tt uint32\_t} & $\le 37451$ \\\cline{2-7}
   & \multicolumn{6}{c|}{\textcolor{gray}{\it List of distinct bins (n=n\_bin)}} \\\cline{3-7}
-  & & \multicolumn{2}{l|}{\sf bin} & Distinct bin & {\tt uint32\_t} & \\\cline{3-7}
-  & & \multicolumn{2}{l|}{\sf n\_chunk} & \# chunks & {\tt int32\_t} & \\\cline{3-7}
+  & & \multicolumn{2}{l|}{\sf bin} & Distinct bin & {\tt uint32\_t} & $\le 37450$ \\\cline{3-7}
+  & & \multicolumn{2}{l|}{\sf n\_chunk} & \# chunks & {\tt uint32\_t} & \memlimited\footnotemark \\\cline{3-7}
   & & \multicolumn{5}{c|}{\textcolor{gray}{\it List of chunks (n=n\_chunk)}} \\\cline{4-7}
   & & & {\sf chunk\_beg} & (Virtual) file offset of the start of the chunk & {\tt uint64\_t} & \\\cline{4-7}
   & & & {\sf chunk\_end} & (Virtual) file offset of the end of the chunk & {\tt uint64\_t} & \\\cline{2-7}
-  & \multicolumn{3}{l|}{\sf n\_intv} & \# 16kbp intervals (for the linear index) & {\tt int32\_t} & \\\cline{2-7}
+  & \multicolumn{3}{l|}{\sf n\_intv} & \# 16kbp intervals (for the linear index) & {\tt uint32\_t} & $\le 2^{17}$ \\\cline{2-7}
   & \multicolumn{6}{c|}{\textcolor{gray}{\it List of intervals (n=n\_intv)}} \\\cline{3-7}
   & & \multicolumn{2}{l|}{\sf ioffset} & (Virtual) file offset of the first alignment in the interval & {\tt uint64\_t} & \\\cline{1-7}
   \multicolumn{4}{|l|}{{\sf n\_no\_coor} (optional)} & Number of unplaced unmapped reads ({\sf RNAME} *) & {\tt uint64\_t} & \\\cline{1-7}
-\end{tabular}}
+\end{tabular}
 \end{table}
+
+\footnotetext{The number of chunks in a single bin is effectively limited by available memory and in any case is typically a maximum of some thousands.}
 
 The index file may optionally contain additional metadata providing a summary
 of the number of mapped and unmapped read-segments per reference sequence,
@@ -1068,7 +1327,7 @@ compatible with real bins and their chunks:
 \begin{tabular}{|l|l|l|r|}
   \hline
   {\sf bin} & Magic bin number & {\tt uint32\_t} & 37450 \\\hline
-  {\sf n\_chunk} & \# chunks & {\tt int32\_t} & 2 \\\hline
+  {\sf n\_chunk} & \# chunks & {\tt uint32\_t} & 2 \\\hline
   {\sf unmapped\_beg} & (Virtual) file offset of the start of placed unmapped reads & {\tt uint64\_t} & \\\hline
   {\sf unmapped\_end} & (Virtual) file offset of the end of placed unmapped reads & {\tt uint64\_t} & \\\hline
   {\sf n\_mapped} & Number of mapped read-segments for this reference & {\tt uint64\_t} & \\\hline
@@ -1116,19 +1375,75 @@ int reg2bins(int beg, int end, uint16_t list[MAX_BIN])
 
 \begin{appendices}
 \appendix
+\section{Parsing region notation}\label{sec:parse-region}
+
+Parsing region notation such as \emph{name}{\tt [:}\emph{begin}{\tt [-}\emph{end}{\tt ]]} (in which omission of the outer bracketed portion indicates a request for the entire reference sequence) would be simple if \emph{name} could not itself contain `{\tt :}' characters, but this is not the case.
+(No such notation containing an optional `{\tt :}' appears in the SAM format itself, but various tools use this notation as a convenient way for their users to specify regions of interest.)
+
+The set of valid reference sequence names is usually already known when parsing this notation---for example, because the associated {\tt @SQ} headers have already been encountered.
+Tools can use this set to determine unambiguously which colons could delimit a known-valid reference sequence name.
+
+In pseudocode form, a string~\emph{str} can be parsed as follows:
+
+\begin{tabbing}
+\qquad\quad
+\= consider the rightmost `{\tt :}' character, if any, of \emph{str} \+\\
+if \emph{str} is of the form `\emph{prefix}{\tt :NUM}' \= or `\emph{prefix}{\tt :NUM-NUM}' \\
+\> or generally `\emph{prefix}{\tt :}\emph{suffix}' for some plausible interval suffix \\
+then \\
+\qquad \= if both \emph{prefix} and \emph{str} are in the known set then\quad{\sf\ldots error: ambiguous representation} \\
+\> else if \emph{prefix} is in the known set then return (\emph{prefix}, {\tt NUM}\ldots{\tt NUM}) \\
+\> else if \emph{str} is in the known set then return (\emph{str}, entire sequence) \\
+\> else\quad{\sf\ldots error: unknown reference sequence name} \\
+\\
+else\qquad{\sf\ldots either {\sl str} does not contain a colon or the suffix is not plausibly numeric}
+\\
+\> if \emph{str} is in the known set then return (\emph{str}, entire sequence) \\
+\> else\quad{\sf\ldots error: unknown reference sequence name or invalid interval syntax}
+\end{tabbing}
+
+\noindent
+The check leading to ``{\sf error: ambiguous representation}'' is important as it prevents confusing interpretations of actually ambiguous input.
+Typically the set of valid reference sequence names will not contain names that are prefixes of other names in the set, so in practice this error will not usually be encountered in non-malicious data.
+
+Either in addition to this algorithm or as an alternative to it, tools can use additional delimiter characters to make an unambiguously parsable notation.
+We recommend a convention using curly brackets around the reference sequence name--- \verb"{"\emph{name}\verb"}"{\tt [:}\emph{begin}{\tt [-}\emph{end}{\tt ]]} ---as being memorable, easily typed, unambiguous, and not expanded by most shells.
+% (RNAME cannot contain commas, so Bash's {a,b} brace expansion won't occur.)
+
 \section{SAM Version History}\label{sec:history}
 
 This lists the date of each tagged SAM version along with changes that
 have been made while that version was current.  The key changes
 that caused the version number to change are shown in bold.
 
-Note the auxiliary tags have now moved to their own
-specification with its own version numbering.\footnote{
-\href{http://samtools.github.io/hts-specs/SAMtags.pdf}{http://samtools.github.io/hts-specs/SAMtags.pdf}}
+Additions and changes to the standard predefined tags are listed in the
+separate {\sl Sequence Alignment/Map Optional Fields Specification}.%
+\footnote{See Appendix~A of
+\href{http://samtools.github.io/hts-specs/SAMtags.pdf}{\tt SAMtags.pdf}
+at \url{https://github.com/samtools/hts-specs}.}
 
-\subsection*{1.5: 23 May 2013 to current}
+\subsection*{1.6: 28 November 2017 to current}
 
 \begin{itemize}
+\item Add {\tt DNBSEQ} to the list of {\tt @RG PL} header tag values. (Apr 2020)
+\item Add {\tt @SQ TP} circular/linear topology header tag. (May 2019)
+\item\textbf{Restricted the allowable punctuation characters in reference sequence names} (in {\tt @SQ SN}, {\sf RNAME}, etc).
+The sets of characters allowed in {\tt @SQ SN} and {\tt @SQ AN} are now identical, which enlarges the previous {\tt AN} set. (Jan 2019)
+
+We recommend that implementations validating reference sequence names do so using the rules in Section~\ref{sec:charset}; are more lenient for files declaring $\mbox{\tt @HD VN} \leq 1.5$; and validate {\tt AN} only against these rules, not the previous more restrictive {\tt AN} rules.
+
+\item Add {\tt @HD SS} sorting details header tag. (Oct 2018)
+\item B array optional fields may have no entries---this was already representable in BAM, clarified that empty arrays are permitted in SAM too. (Jul 2018)
+\item Add {\tt @SQ DS} header tag. (Jul 2018)
+\item Add {\tt @RG BC} header tag. (Apr 2018)
+\item Permit UTF-8 in a few header tags. (Mar 2018)
+\item\textbf{Add support for CIGAR strings with more than 65,535 operations.} (Nov 2017)
+\end{itemize}
+
+\subsection*{1.5: 23 May 2013 to November 2017}
+
+\begin{itemize}
+\item Add {\tt @SQ AN} header tag, allowing only alphanumeric and `\verb"*+.@_|-"' characters in its names. (Jul 2017)
 \item Add {\tt @SQ AH} header tag. (Mar 2017)
 \item Auxiliary tags migrated to SAMtags document. (Sep 2016)
 \item Z and H auxiliary tags are permitted to be zero length. (Jun 2016)
@@ -1139,28 +1454,22 @@ specification with its own version numbering.\footnote{
 \item Add meaning to reverse FLAG on unmapped reads. (Mar 2015)
 \item Document the {\tt idxstats} .bai elements. (Nov 2014)
 \item Addition of CSI index. (Sep 2014)
-\item Add {\tt MC} auxiliary tag. (Dec 2013)
 \item Add {\tt @PG DS} header field. (Dec 2013)
 \item Document the BAM EOF byte values. (Dec 2013)
 \item Glossary of alignment types. (May 2013)
-\item Add {\tt SA:Z} tag; PNEXT/RNEXT points to next read, not
-  segment.  (May 2013)
+\item Note that PNEXT/RNEXT points to next read, not segment. (May 2013)
 \item \textbf{Add SUPPLEMENTARY flag bit}. (May 2013)
 \end{itemize}
 
 \subsection*{1.4: 21 April 2011 to May 2013}
 
 \begin{itemize}
-\item Add guide to using sequence annotations ({\tt CT/PT tags}). (Mar 2012)
+\item Add guide to using sequence annotations ({\tt CT/PT} tags). (Mar 2012)
 \item Increase max reference length from $2^{29}$ to $2^{31}$. (Sep
   2011)
-\item Add {\tt CO} and {\tt RT} auxiliary tags. (Sep 2011)
 \item Clarify {\tt @SQ M5} header tag generation. (Sep 2011)
-\item Describe padded alignments and add {\tt CT/PT tags}. (Sep 2011)
-\item Add {\tt BC} barcode auxiliary tag. (Sep 2011)
-\item Change {\tt FZ} tag from type {\tt H} to type {\tt B,S}. (Aug 2011)
+\item Describe padded alignments. (Sep 2011)
 \item Add {\tt @RG FO}, {\tt KS} header fields. (Apr 2011)
-\item Add {\tt FZ} auxiliary tag. (Apr 2011)
 \item Clarify chaining of PG records. (Apr 2011)
 \item \textbf{Add {\tt B} array auxiliary tag type.} (Apr 2011)\
 \item \textbf{Permit IUPAC in SEQ and {\tt MD} auxiliary tag.} (Apr 2011)
@@ -1170,12 +1479,11 @@ specification with its own version numbering.\footnote{
 \subsection*{1.3: July 2010 to April 2011}
 
 \begin{itemize}
-\item Re-add {\tt CC} and {\tt CP} auxiliary tags. (Mar 2011)
-\item Add CIGAR N intron/skip operator. (Dec 2010)
-\item Add {\tt BQ} BAQ tag. (Nov 2010)
 \item Add {\tt RG PG} header field. (Nov 2010)
 \item Add BAM description and index sections. (Nov 2010)
 \item \textbf{Removal of FLAG letters.} (July 2010)
+\item The {\tt SM} header field, previously mandatory for {\tt @RG}, is now
+optional. (July 2010)
 \end{itemize}
 
 \subsection*{1.0: 2009 to July 2010}
