@@ -619,7 +619,48 @@ However, the alternate allele assembly file may contain additional information a
 ##INFO=<ID=DBRIPID,Number=1,Type=String,Description="ID of this element in DBRIP">
 ##INFO=<ID=MATEID,Number=.,Type=String,Description="ID of mate breakends">
 ##INFO=<ID=PARID,Number=1,Type=String,Description="ID of partner breakend">
-##INFO=<ID=EVENT,Number=1,Type=String,Description="ID of event associated to breakend">
+##INFO=<ID=EVENT,Number=1,Type=String,Description="ID of associated event">
+##INFO=<ID=EVENTTYPE,Number=1,Type=String,Description="Type of associated event">
+\end{verbatim}
+\normalsize
+
+Whilst simple events such as deletions and duplications can be wholly represented by a single VCF record, complex rearrangements such as chromothripsis result in a large number of breakpoints.
+VCF uses the $EVENT$ field to group such related records together, and $EVENTTYPE$ to classify these events.
+All records with the same $EVENT$ value are considered to be part of the same event.
+
+The following $EVENTTYPE$ values are reserved and should be used when appropriate:
+
+\begin{itemize}
+  \item DEL - Deletion
+  \item DEL:ME - Deletion of mobile element with respect to the reference
+  \item INS - Insertion
+  \item INS:ME - Insertion of mobile element
+  \item DUP - Duplication
+  \item DUP:TANDEM - Tandem duplication
+  \item DUP:DISPERSED - Dispersed duplication
+  \item INV - Inversion
+  \item INV:CLN:CLN - Inversion with clean breaks on both sides
+  \item INV:CLN:DEL - Inversion with a clean left break and right deletion
+  \item INV:CLN:DUP - Inversion with a clean left break and right duplication
+  \item INV:DEL:CLN - Inversion with left deletion and clean right break
+  \item INV:DEL:DEL - Inversion with left deletion and right deletion
+  \item INV:DEL:DUP - Inversion with left deletion and right duplication
+  \item INV:DUP:CLN - Inversion with left duplication and clean right break
+  \item TRA - Translocation
+  \item TRA:BALANCED - Balanced inter-chromosomal translocation
+  \item TRA:UNBALANCED - Unbalanced inter-chromosomal translocation
+  \item CHROMOTHRIPSIS - Chromothripsis
+  \item CHROMOPLEXY - Chromoplexy
+  \item BFB - breakage fusion bridge
+  \item DOUBLEMINUTE - Double minute
+  \item dDUP-iDEL - Insertion with insertion site deletion
+  \item INS-iDEL - Insertion with insertion site deletion
+\end{itemize}
+
+The sematics of other $EVENTTYPE$ values is implementation-defined.
+
+\footnotesize
+\begin{verbatim}
 ##INFO=<ID=CILEN,Number=2,Type=Integer,Description="Confidence interval around the inserted material between breakends">
 ##INFO=<ID=DP,Number=1,Type=Integer,Description="Read Depth of segment containing breakend">
 ##INFO=<ID=DPADJ,Number=.,Type=Integer,Description="Read Depth of adjacency">
