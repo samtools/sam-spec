@@ -2,7 +2,7 @@ all: pdf
 
 PDFS =	BCFv1_qref.pdf \
 	BCFv2_qref.pdf \
-        BEDv1.pdf \
+	BEDv1.pdf \
 	CRAMv2.1.pdf \
 	CRAMv3.pdf \
 	crypt4gh.pdf \
