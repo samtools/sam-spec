@@ -49,8 +49,10 @@
 \begin{document}
 
 % acronym uses \AtBeginDocument so overriding must happen afterwards
+% do not hyperlink acronyms
 \makeatletter
-\renewcommand*{\AC@hyperlink}[2]{#2} % do not hyperlink acronyms
+\renewcommand*{\AC@hyperlink}[2]{#2}
+\renewcommand*{\AC@hyperref}[2]{#2}
 \makeatother
 
 \maketitle
