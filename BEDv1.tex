@@ -16,19 +16,20 @@
 \usepackage{footnotehyper}
 \usepackage[strict]{changepage}
 \usepackage[binary-units=true]{siunitx}
-\usepackage[mark]{gitinfo2}
+
+\input{BEDv1.ver}
 
 \hypersetup{colorlinks=true,
   linkcolor=blue,
   filecolor=magenta,
   urlcolor=blue,
-  pdfinfo={githash=\gitHash}}
+  pdfinfo={githash=\commitdesc}}
 
 \definecolor{cverbbg}{gray}{0.93}
 
 \title{The Browser Extensible Data~(BED) format}
 \author{Jeffrey Niu, Danielle Denisko, Michael M.~Hoffman}
-\date{\today}
+\date{\headdate}
 
 \setlength{\emergencystretch}{\hsize}
 \setlength{\footnotemargin}{1em}
@@ -50,6 +51,12 @@
 \frenchspacing
 
 \maketitle
+
+\begin{small}
+\noindent
+The master version of this document can be found at \url{https://github.com/samtools/hts-specs}.
+This printing is version~\commitdesc\ from that repository, last modified on the date shown above.
+\end{small}
 
 \acused{ASCII}
 
