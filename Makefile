@@ -20,6 +20,7 @@ pdf: $(PDFS:%=new/%)
 %.pdf: new/%.pdf
 	cp $^ $@
 
+new/BEDv1.pdf    diff/BEDv1.pdf:    BEDv1.tex    new/BEDv1.ver
 new/CRAMv2.1.pdf diff/CRAMv2.1.pdf: CRAMv2.1.tex new/CRAMv2.1.ver
 new/CRAMv3.pdf   diff/CRAMv3.pdf:   CRAMv3.tex   new/CRAMv3.ver
 new/crypt4gh.pdf diff/crypt4gh.pdf: crypt4gh.tex new/crypt4gh.ver
