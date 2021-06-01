@@ -12,7 +12,7 @@
 \usepackage{tabularx}
 \usepackage{todonotes}
 \usepackage[hyperfootnotes=false]{hyperref} % doesn't work in tabulars as currently set
-\usepackage{acronym}
+\usepackage[nohyperlinks]{acronym}
 \usepackage{footnotehyper}
 \usepackage[strict]{changepage}
 \usepackage[binary-units=true]{siunitx}
@@ -47,13 +47,6 @@
 % chktex-file -3
 
 \begin{document}
-
-% acronym uses \AtBeginDocument so overriding must happen afterwards
-% do not hyperlink acronyms
-\makeatletter
-\renewcommand*{\AC@hyperlink}[2]{#2}
-\renewcommand*{\AC@hyperref}[2]{#2}
-\makeatother
 
 \maketitle
 
