@@ -5,6 +5,7 @@
 
 \usepackage{amsmath}
 \usepackage{booktabs}
+\usepackage{calc}
 \usepackage[flushmargin,hang]{footmisc}
 \usepackage{microtype}
 \usepackage{newverbs}
@@ -16,6 +17,7 @@
 \usepackage{footnotehyper}
 \usepackage[strict]{changepage}
 \usepackage[binary-units=true]{siunitx}
+\usepackage{enumitem}
 
 \input{BEDv1.ver}
 
@@ -375,7 +377,10 @@ Track files are not valid \ac{BED} files --- valid \ac{BED} files must not have 
 To distinguish between \ac{BED} files and track files, track files should use the file extension~\texttt{.track}.
 
 \section{Acronyms}
-\begin{acronym}[ASCII]
+
+% using the optional argument to acronym to set the label width causes it to use the list environment instead of description, which means we can't set nosep easily
+\setlist[description]{labelwidth=\widthof{\textbf{GA4GH}},nosep}
+\begin{acronym}
   \acro{ASCII}{American Standard Code for Information Interchange}
   \acro{BED}{Browser Extensible Data}
   \acro{GA4GH}{Global Alliance for Genomics and Health}
