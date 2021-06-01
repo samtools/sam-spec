@@ -3,7 +3,6 @@
 
 \usepackage[letterpaper,margin=1in]{geometry}
 
-\usepackage{acronym}
 \usepackage{amsmath}
 \usepackage{booktabs}
 \usepackage[flushmargin,hang]{footmisc}
@@ -13,6 +12,7 @@
 \usepackage{tabularx}
 \usepackage{todonotes}
 \usepackage[hyperfootnotes=false]{hyperref} % doesn't work in tabulars as currently set
+\usepackage{acronym}
 \usepackage{footnotehyper}
 \usepackage[strict]{changepage}
 \usepackage[binary-units=true]{siunitx}
@@ -39,16 +39,19 @@
 
 \newcolumntype{L}{>{\raggedright\arraybackslash}X}
 
+\providecommand*{\Ac}[1]{\ac{#1}} % work around outdated acronym.sty packages
+
+\frenchspacing
+
 % eliminate passive voice warnings
 % chktex-file -3
 
 \begin{document}
+
+% acronym uses \AtBeginDocument so overriding must happen afterwards
 \makeatletter
 \renewcommand*{\AC@hyperlink}[2]{#2} % do not hyperlink acronyms
 \makeatother
-
-
-\frenchspacing
 
 \maketitle
 
