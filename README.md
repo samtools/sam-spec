@@ -1,6 +1,8 @@
 SAM/BAM and related specifications
 ==================================
 
+Documents in this repository are maintained under the guidance of the Global Alliance for Genomics & Health ([GA4GH][GA4GH.org]) as part of the Large Scale Genomics workstream.  More information on GA4GH procedures and how to get involved [is available here][LGS-wiki].
+
 Links **in bold** point to the corresponding PDFs on this repository's [GitHub Pages website][hts-specs].
 
 Please request improvements or report errors using this repository, but see also [the list of maintainers](MAINTAINERS.md) if you need to contact them directly.
@@ -14,7 +16,7 @@ Alignment data files
 These formats are discussed on the [samtools-devel mailing list][samdev-ml].
 
 **[CRAMv3.tex]** is the canonical specification for the CRAM format, while **[CRAMv2.1.tex]** describes its now-obsolete predecessor.
-Further details can be found at [ENA's CRAM toolkit page][ena-cram].
+Further details can be found at [ENA's CRAM toolkit page][ena-cram] and [GA4GH's CRAM page][ga4gh-cram].
 CRAM discussions can also be found on the [samtools-devel mailing list][samdev-ml].
 
 The **[tabix.tex]** and **[CSIv1.tex]** quick references summarize more recent index formats: the tabix tool indexes generic textual genome position-sorted files, while CSI is [htslib]'s successor to the BAI index format.
@@ -53,6 +55,15 @@ Transfer protocols
 
 **[Refget.md]** enables access to reference sequences using an identifier derived from the sequence itself.
 
+Contributors
+------------
+
+A summary of contributors can be found on the [GA4GH site][contrib].
+A more complete list of contributors and acknowlegdements may be found in each separate specification document.
+
+[GA4GH.org]:    https://www.ga4gh.org
+[LGS-wiki]:     https://github.com/ga4gh/large-scale-genomics-wiki/wiki
+
 [SAMv1.tex]:    http://samtools.github.io/hts-specs/SAMv1.pdf
 [SAMtags.tex]:  http://samtools.github.io/hts-specs/SAMtags.pdf
 [CRAMv2.1.tex]: http://samtools.github.io/hts-specs/CRAMv2.1.pdf
@@ -70,6 +81,7 @@ Transfer protocols
 [Refget.md]:    https://samtools.github.io/hts-specs/refget.html
 
 [ena-cram]:   http://www.ebi.ac.uk/ena/about/cram_toolkit
+[ga4gh-cram]: https://www.ga4gh.org/cram/
 [htslib]:     https://github.com/samtools/htslib
 [samtools]:   https://github.com/samtools/samtools
 [hts-specs]:  http://samtools.github.io/hts-specs/
@@ -79,5 +91,7 @@ Transfer protocols
 
 [FASTA]:      https://en.wikipedia.org/wiki/FASTA_format
 [FASTQ]:      https://academic.oup.com/nar/article/38/6/1767/3112533
+
+[contrib]:    https://www.ga4gh.org/genomic-data-toolkit/samtools-contributors
 
 <!-- vim:set linebreak: -->
